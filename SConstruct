@@ -5,7 +5,7 @@ import sys
 from methods import print_error
 
 
-libname = "EXTENSION-NAME"
+libname = "chunkinator"
 projectdir = "demo"
 
 localEnv = Environment(tools=["default"], PLATFORM="")
@@ -39,6 +39,7 @@ env = SConscript("godot-cpp/SConstruct", {"env": env, "customs": customs})
 
 env.Append(CPPPATH=["src/"])
 sources = Glob("src/*.cpp")
+sources += Glob("src/debugger/*.cpp")
 
 if env["target"] in ["editor", "template_debug"]:
     try:
@@ -57,6 +58,11 @@ library = env.SharedLibrary(
     "bin/{}/{}".format(env['platform'], lib_filename),
     source=sources,
 )
+
+if env.get("is_msvc", False):
+    env.Append(CXXFLAGS=["/std:c++20"])
+else:
+    env.Append(CXXFLAGS=["-std=c++20"])
 
 copy = env.Install("{}/bin/{}/".format(projectdir, env["platform"]), library)
 

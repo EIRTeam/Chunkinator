@@ -60,3 +60,6 @@ compile_commands.json
 # Cmake
 cmake-build*
 CMakeUserPresets.json
+
+# Clangd cache
+.cache/*
