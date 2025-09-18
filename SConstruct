@@ -40,6 +40,8 @@ env = SConscript("godot-cpp/SConstruct", {"env": env, "customs": customs})
 env.Append(CPPPATH=["src/"])
 sources = Glob("src/*.cpp")
 sources += Glob("src/debugger/*.cpp")
+sources += Glob("src/chunkinator/*.cpp")
+sources += Glob("src/terrain_generator/*.cpp")
 
 if env["target"] in ["editor", "template_debug"]:
     try:

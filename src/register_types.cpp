@@ -5,6 +5,7 @@
 #include <godot_cpp/core/defs.hpp>
 #include <godot_cpp/godot.hpp>
 
+#include "chunkinator/chunkinator_test.h"
 #include "example_class.h"
 #include "quadtree.h"
 #include "worldman.h"
@@ -23,8 +24,10 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level)
 	GDREGISTER_CLASS(QuadTree);
 	GDREGISTER_CLASS(WorldMan);
 	GDREGISTER_CLASS(WorldManDebugger);
+	GDREGISTER_CLASS(ChunkinatorTest);
 	GDREGISTER_ABSTRACT_CLASS(SuperchunkMap);
 	GDREGISTER_ABSTRACT_CLASS(SuperchunkDebugger);
+	GDREGISTER_ABSTRACT_CLASS(Chunkinator);
 }
 
 void uninitialize_gdextension_types(ModuleInitializationLevel p_level) {
