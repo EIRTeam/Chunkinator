@@ -31,7 +31,7 @@ class WorldMan : public Node3D {
     GDCLASS(WorldMan, Node3D);
 private:
     static constexpr int SUPERCHUNK_RADIUS = 6;
-    static const int SUPERCHUNK_SIZE = 4096;
+    static constexpr int SUPERCHUNK_SIZE = 4096;
     static constexpr int SUPERCHUNK_MAX_DEPTH = 5;
     static constexpr int CHUNK_MIN_DEPTH_FOR_COLLISION = 4;
     static constexpr int ROAD_SPLINE_COUNT_PER_SUPERCHUNK = 14;

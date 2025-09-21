@@ -5,6 +5,7 @@
 #include <godot_cpp/core/defs.hpp>
 #include <godot_cpp/godot.hpp>
 
+#include "chunkinator/chunkinator_debug_snapshot_viewer.h"
 #include "chunkinator/chunkinator_test.h"
 #include "example_class.h"
 #include "quadtree.h"
@@ -28,6 +29,7 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level)
 	GDREGISTER_ABSTRACT_CLASS(SuperchunkMap);
 	GDREGISTER_ABSTRACT_CLASS(SuperchunkDebugger);
 	GDREGISTER_ABSTRACT_CLASS(Chunkinator);
+	GDREGISTER_ABSTRACT_CLASS(ChunkinatorDebugLayerViewer);
 }
 
 void uninitialize_gdextension_types(ModuleInitializationLevel p_level) {

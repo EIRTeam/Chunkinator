@@ -35,9 +35,17 @@ void TerrainHeightmapChunk::generate() {
 
 void TerrainHeightmapChunk::debug_draw(ChunkinatorDebugDrawer *p_debug_drawer) const {
     if (!debug_texture.is_valid()) {
-        const_cast<TerrainHeightmapChunk*>(this)->debug_texture = ImageTexture::create_from_image(heightmap);
+        Ref<Image> debug_image = Image::create_empty(heightmap->get_width(), heightmap->get_height(), false, Image::FORMAT_RGBA8);
+
+        for (int x = 0; x < debug_image->get_width(); x++) {
+            for (int y = 0; y < debug_image->get_height(); y++) {
+                float height = heightmap->get_pixel(x, y).a;
+                debug_image->set_pixel(x, y, Color(height, height, height, 1.0f));
+            }
+        }
+        const_cast<TerrainHeightmapChunk*>(this)->debug_texture = ImageTexture::create_from_image(debug_image);
     }
-    p_debug_drawer->draw_texture(heightmap, get_chunk_bounds());
+    p_debug_drawer->draw_texture(debug_texture, get_chunk_bounds());
 }
 
 int TerrainHeightmapLayer::get_chunk_size() const {

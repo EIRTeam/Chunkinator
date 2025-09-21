@@ -2,5 +2,7 @@ extends Node
 
 
 func _ready() -> void:
-	var example := ExampleClass.new()
-	example.print_type(example)
+	var cin := ChunkinatorTest.new()
+	add_child(cin)
+func _process(delta: float) -> void:
+	pass

@@ -9,6 +9,7 @@
 class ChunkinatorTestChunk : public ChunkinatorChunk {
     void test();
     virtual void generate() override;
+    virtual void debug_draw(ChunkinatorDebugDrawer *p_debug_drawer) const override;
 };
 
 class ChunkinatorTestLayer : public ChunkinatorLayer {
@@ -21,6 +22,7 @@ class ChunkinatorTest : public Node3D {
     GDCLASS(ChunkinatorTest, Node3D);
     ChunkinatorDebugger *debugger = nullptr;
 public:
+    virtual void _input(const Ref<InputEvent> &p_event) override;
     Ref<Chunkinator> chunkinator;
     static void _bind_methods();
     void _notification(int p_what);

@@ -308,8 +308,8 @@ void WorldMan::apply_road_height(const WorldManSuperchunk &p_superchunk, Vector2
         const Vector2 a_to_b =  - Vector2(pos_b.x, pos_b.z);
         const float dist = a_to_b.length();
 
-        (p_local_position - pos_a_2d).dot(a_to_b)
-        p_local_position.project();
+        //(p_local_position - pos_a_2d).dot(a_to_b)
+        //p_local_position.project();
     }
 }
 
