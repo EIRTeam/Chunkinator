@@ -2,7 +2,12 @@
 #include "godot_cpp/core/math.hpp"
 #include "godot_cpp/core/print_string.hpp"
 #include "godot_cpp/templates/local_vector.hpp"
+#include "profiling.h"
+#include "segment_quadtree.h"
 #include "terrain_generator/random_point_scatter.h"
+#include "terrain_generator/terrain_heightmap.h"
+#include "tracy/Tracy.hpp"
+#include <limits>
 
 int TerrainRoadConnectionLayer::get_chunk_size() const {
     return 16384;
@@ -15,23 +20,28 @@ Ref<ChunkinatorChunk> TerrainRoadConnectionLayer::instantiate_chunk() {
     return chunk;
 }
 
-LocalVector<Vector2> TerrainRoadConnectionLayer::get_points_in_radius(Vector2 p_position, float p_radius) const {
+Vector<Vector2> TerrainRoadConnectionLayer::get_points_in_radius(Vector2 p_position, float p_radius) const {
+    ZoneScoped;
     Ref<RandomPointLayer> layer = get_layer("Road Random Points");
-    LocalVector<Vector2> points = layer->get_points_in_bounds(Rect2(p_position - Vector2(p_radius, p_radius), Vector2(p_radius, p_radius)));
+    Vector<Vector2> points = layer->get_points_in_bounds(Rect2(p_position - Vector2(p_radius, p_radius), Vector2(p_radius, p_radius)));
     const float radius_squared = p_radius * p_radius;
     for (int i = points.size()-1; i >= 0; i--) {
-        if (points[i].distance_squared_to(p_position) > p_radius) {
+        if (points[i].distance_squared_to(p_position) > radius_squared) {
             points.remove_at(i);
         }
     }
     return points;
 }
 
-LocalVector<Vector2> TerrainRoadConnectionLayer::get_points_in_bounds(Rect2 p_bounds) const {
+Vector<Vector2> TerrainRoadConnectionLayer::get_points_in_bounds(Rect2 p_bounds) const {
     Ref<RandomPointLayer> layer = get_layer("Road Random Points");
     return layer->get_points_in_bounds(p_bounds);
 }
 
+double TerrainRoadConnectionLayer::get_height_at_position(Vector2 p_position) const {
+    Ref<TerrainHeightmapLayer> layer = get_layer("Heightmap Layer");
+    return layer->sample_height(p_position);
+}
 
 struct PointSorter {
     struct PointDistance {
@@ -43,7 +53,8 @@ struct PointSorter {
     }
 };
 
-void sort_by_dist_to_point(Vector2 p_point, LocalVector<Vector2> &ri_points) {
+void sort_by_dist_to_point(Vector2 p_point, Vector<Vector2> &ri_points) {
+    FuncProfile;
     LocalVector<PointSorter::PointDistance> distances_squared;
     distances_squared.reserve(ri_points.size());
 
@@ -55,27 +66,35 @@ void sort_by_dist_to_point(Vector2 p_point, LocalVector<Vector2> &ri_points) {
     }
 
     distances_squared.sort_custom<PointSorter>();
-    LocalVector<Vector2> positions;
+    Vector<Vector2> positions;
     positions.resize(ri_points.size());
+    Vector2 *positions_ptrw = positions.ptrw();
 
     for (int i = 0; i < ri_points.size(); i++) {
-        positions[i] = ri_points[distances_squared[i].idx];
+        positions_ptrw[i] = ri_points[distances_squared[i].idx];
     }
 
     ri_points = positions;
 }
 
+bool TerrainRoadConnectionLayer::get_distance_to_closest_road_segment(const Vector2 &p_position, float &r_distance, SegmentQuadtree::QuadTreeSegment &r_segment) const {
+    Ref<TerrainRoadConnectionChunk> chunk = get_chunk_in_position(p_position);
+    return chunk->get_distance_to_closest_road_segment(p_position, r_segment, r_distance);
+}
+
 void TerrainRoadConnectionChunk::generate() {
+    FuncProfile;
     Rect2 check_rect = get_chunk_bounds().grow(connection_radius);
-    LocalVector<Vector2> points = layer->get_points_in_bounds(check_rect);
+    Vector<Vector2> points = layer->get_points_in_bounds(check_rect);
     const float check_dist_squared = connection_radius * connection_radius;
 
+    Vector<Vector2> points_copy = points.duplicate();
     for (int i = 0; i < points.size(); i++) {
-        LocalVector<Vector2> points_in_radius = layer->get_points_in_radius(points[i], connection_radius);
-        sort_by_dist_to_point(points[i], points_in_radius);
+        //Vector<Vector2> points_in_radius = layer->get_points_in_radius(points[i], connection_radius);
+        sort_by_dist_to_point(points[i], points_copy);
         int added_points = 0;
-        for (int j = 0; j < points.size(); j++) {
-            const float dist_sq = points[i].distance_squared_to(points[j]);
+        for (int j = 0; j < points_copy.size(); j++) {
+            const float dist_sq = points_copy[j].distance_squared_to(points[i]);
             if (Math::is_zero_approx(dist_sq)) {
                 continue;
             }
@@ -83,7 +102,7 @@ void TerrainRoadConnectionChunk::generate() {
                 added_points++;
                 connections.push_back({
                     .from = points[i],
-                    .to = points[j]
+                    .to = points_copy[j]
                 });
             }
             if (added_points > maximum_connections) {
@@ -91,13 +110,35 @@ void TerrainRoadConnectionChunk::generate() {
             }
         }
     }
+
+    LocalVector<SegmentQuadtree::QuadTreeSegment> segments;
+
+    for (int i = 0; i < connections.size(); i++) {
+        segments.push_back({.start = connections[i].from, .end = connections[i].to });
+    }
+
+    quad_tree.initialize(get_chunk_bounds().grow(4096), segments);
 }
 
 void TerrainRoadConnectionChunk::debug_draw(ChunkinatorDebugDrawer *p_debug_drawer) const {
-    for (const Connection &connection : connections) {
-        if (get_chunk_bounds().has_point((connection.from + connection.to) * 0.5)) {
-            p_debug_drawer->draw_line(connection.from, connection.to);
-        }
+    if (get_chunk_index() != Vector2i(0, 0)) {
+        return;
     }
-    Rect2 check_rect = get_chunk_bounds().grow(connection_radius);
+
+    for (int i = 0; i < connections.size(); i++) {
+        p_debug_drawer->draw_line(connections[i].from, connections[i].to);
+    }
 };
+bool TerrainRoadConnectionChunk::get_distance_to_closest_road_segment(Vector2 p_position, SegmentQuadtree::QuadTreeSegment &r_segment, float &r_distance) const {
+    int segment = quad_tree.find_closest_segment(p_position, r_distance);
+    if (segment != -1) {
+        r_segment = quad_tree.get_segment(segment);
+        return true;
+    }
+
+    return false;
+}
+
+Ref<Image> TerrainRoadConnectionChunk::get_heightmap() const {
+    return nullptr;
+}

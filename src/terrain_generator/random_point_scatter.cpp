@@ -14,8 +14,8 @@ Ref<ChunkinatorChunk> RandomPointLayer::instantiate_chunk() {
     return chunk;
 }
 
-LocalVector<Vector2> RandomPointLayer::get_points_in_bounds(Rect2 p_world_bounds) const {
-    LocalVector<Vector2> points;
+Vector<Vector2> RandomPointLayer::get_points_in_bounds(Rect2 p_world_bounds) const {
+    Vector<Vector2> points;
     for (int i = 0; i < get_chunk_count(); i++) {
         Ref<RandomPointChunk> chunk = get_chunk(i);
         if (!chunk->get_chunk_bounds().intersects(p_world_bounds)) {

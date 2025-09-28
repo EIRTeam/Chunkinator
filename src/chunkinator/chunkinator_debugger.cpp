@@ -57,6 +57,10 @@ void ChunkinatorDebugger::_on_snapshot_selected(int p_idx) {
     tabs->set_tab_title(tabs->get_tab_count()-1, vformat("Snapshot %d", p_idx));
 }
 
+void ChunkinatorDebugger::_bind_methods() {
+    
+}
+
 ChunkinatorDebugger::ChunkinatorDebugger() {
     tabs = memnew(TabContainer);
     add_child(tabs);

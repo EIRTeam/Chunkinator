@@ -16,8 +16,7 @@ private:
 public:
     virtual int get_chunk_size() const override;
     virtual Ref<ChunkinatorChunk> instantiate_chunk() override;
-    LocalVector<Vector2> get_points_in_bounds(Rect2 p_world_bounds) const;
-    LocalVector<Vector2> get_points_in_chunk(Vector2i p_chunk_idx) const;
+    Vector<Vector2> get_points_in_bounds(Rect2 p_world_bounds) const;
 };
 
 class RandomPointChunk : public ChunkinatorChunk {

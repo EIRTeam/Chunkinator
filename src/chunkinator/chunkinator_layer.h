@@ -26,6 +26,7 @@ public:
     virtual Ref<ChunkinatorChunk> instantiate_chunk() = 0;
     Ref<ChunkinatorChunk> get_chunk_by_index(Vector2i p_chunk_idx) const;
     Ref<ChunkinatorChunk> get_chunk(int p_idx) const;
+    Ref<ChunkinatorChunk> get_chunk_in_position(const Vector2 &p_position) const;
     int get_chunk_count() const;
     StringName get_name() const;
     Ref<ChunkinatorLayer> get_layer(const StringName p_layer_name) const;

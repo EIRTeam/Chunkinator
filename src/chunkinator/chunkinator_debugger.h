@@ -28,5 +28,6 @@ class ChunkinatorDebugger : public Control {
 public:
     void set_chunkinator(Ref<Chunkinator> p_chunkinator);
     void _on_snapshot_selected(int p_idx);
+    static void _bind_methods();
     ChunkinatorDebugger();
 };

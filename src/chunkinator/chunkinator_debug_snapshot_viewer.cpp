@@ -134,7 +134,7 @@ void ChunkinatorDebugLayerViewer::_notification(int p_what) {
                 }
                 
                 const Rect2 chunk_rect = Rect2(Vector2(chunk) * layer_snapshot.layer->get_chunk_size(), Vector2(1.0, 1.0) * layer_snapshot.layer->get_chunk_size());
-                draw_rect(draw_trf.xform(chunk_rect), chunk_color_fill);
+                //draw_rect(draw_trf.xform(chunk_rect), chunk_color_fill);
             }
             // Debug stuff must be drawn underneath it all
             for (const ChunkinatorDebugDrawer::DrawCommand &dc : layer_snapshot.drawer.get_draw_commands()) {

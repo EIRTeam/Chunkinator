@@ -6,13 +6,12 @@
 #include <godot_cpp/godot.hpp>
 
 #include "chunkinator/chunkinator_debug_snapshot_viewer.h"
+#include "chunkinator/chunkinator_debugger.h"
 #include "chunkinator/chunkinator_test.h"
 #include "example_class.h"
 #include "quadtree.h"
-#include "worldman.h"
-#include "debugger/worldman_debugger.h"
-#include "debugger/superchunk_map.h"
-#include "debugger/superchunk_debugger.h"
+#include "segment_quadtree.h"
+#include "terrain_generator/terrain_manager.h"
 
 using namespace godot;
 
@@ -23,13 +22,12 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level)
 	}
 	GDREGISTER_CLASS(ExampleClass);
 	GDREGISTER_CLASS(QuadTree);
-	GDREGISTER_CLASS(WorldMan);
-	GDREGISTER_CLASS(WorldManDebugger);
 	GDREGISTER_CLASS(ChunkinatorTest);
-	GDREGISTER_ABSTRACT_CLASS(SuperchunkMap);
-	GDREGISTER_ABSTRACT_CLASS(SuperchunkDebugger);
 	GDREGISTER_ABSTRACT_CLASS(Chunkinator);
 	GDREGISTER_ABSTRACT_CLASS(ChunkinatorDebugLayerViewer);
+	GDREGISTER_ABSTRACT_CLASS(ChunkinatorDebugger);
+	GDREGISTER_ABSTRACT_CLASS(TerrainManager);
+	GDREGISTER_ABSTRACT_CLASS(SegmentQuadTreeDebug);
 }
 
 void uninitialize_gdextension_types(ModuleInitializationLevel p_level) {

@@ -13,6 +13,7 @@ public:
     virtual int get_chunk_size() const override;
     virtual Ref<ChunkinatorChunk> instantiate_chunk() override;
     double sample_noise(const Vector2 &p_world_position) const;
+    double sample_height(Vector2 p_world_position) const;
     TerrainHeightmapLayer();
 };
 
@@ -24,5 +25,6 @@ class TerrainHeightmapChunk : public ChunkinatorChunk {
 public:
     virtual void generate() override;
     virtual void debug_draw(ChunkinatorDebugDrawer *p_debug_drawer) const override;
+    double sample_height(Vector2 p_position) const;
     friend class TerrainHeightmapLayer;
 };

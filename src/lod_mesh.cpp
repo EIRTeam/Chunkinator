@@ -172,11 +172,16 @@ Ref<Mesh> LODMesh::generate_mesh(const int p_mesh_quality) {
         indices.push_back(next_top_idx);
     }
 
+    PackedFloat32Array dummy_tangents;
+    dummy_tangents.resize(vertices.size() * 4);
+    dummy_tangents.fill(0.0f);
+
     Array mesh_arr;
     mesh_arr.resize(ArrayMesh::ARRAY_MAX);
     mesh_arr[ArrayMesh::ARRAY_VERTEX] = vertices;
     mesh_arr[ArrayMesh::ARRAY_INDEX] = indices;
     mesh_arr[ArrayMesh::ARRAY_TEX_UV] = uvs;
+    mesh_arr[ArrayMesh::ARRAY_TANGENT] = dummy_tangents;
     Ref<ArrayMesh> pl_mesh;
     pl_mesh.instantiate();
     pl_mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, mesh_arr);

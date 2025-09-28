@@ -1,16 +1,39 @@
 #include "chunkinator_test.h"
 #include "chunkinator/chunkinator_debugger.h"
+#include "godot_cpp/classes/camera3d.hpp"
 #include "godot_cpp/classes/global_constants.hpp"
 #include "godot_cpp/classes/input_event_key.hpp"
+#include "godot_cpp/classes/mesh_instance3d.hpp"
+#include "godot_cpp/classes/plane_mesh.hpp"
+#include "godot_cpp/classes/shader_material.hpp"
 #include "godot_cpp/classes/window.hpp"
+#include "godot_cpp/classes/resource_loader.hpp"
+#include "segment_quadtree.h"
 #include "terrain_generator/random_point_scatter.h"
+#include "terrain_generator/terrain_chunk_node.h"
 #include "terrain_generator/terrain_heightmap.h"
+#include "terrain_generator/terrain_heightmap_combine_layer.h"
 #include "terrain_generator/terrain_roads.h"
+#include "lod_mesh.h"
 
+void ChunkinatorTest::_on_generation_completed() {
+    /*for (int i = 0; i < modified_heightmap_layer->get_chunk_count(); i++) {
+        Ref<TerrainRoadConnectionChunk> chunk = modified_heightmap_layer->get_chunk(i);
+        if (superchunk_meshes.has(chunk->get_chunk_index())) {
+            continue;
+        }
+        TerrainChunkNode *node = memnew(TerrainChunkNode);
+        add_child(node);
+        Ref<ImageTexture> heightmap_texture = ImageTexture::create_from_image(chunk->get_heightmap());
+        node->initialize(modified_heightmap_layer->get_chunk_size(), chunk->get_chunk_index(), chunk->get_heightmap(), heightmap_texture, plane_mesh);
+        node->update();
+        superchunk_meshes.insert(chunk->get_chunk_index(), node);
+    }*/
+}
 void ChunkinatorTest::_input(const Ref<InputEvent> &p_event) {
     if (Ref<InputEventKey> ev = p_event; ev.is_valid()) {
         if (ev->is_pressed() && !ev->is_echo() && ev->get_keycode() == godot::KEY_F2) {
-            chunkinator->set_generation_rect(Rect2(-1000.0, -1000.0, 20000, 20000));
+            chunkinator->set_generation_rect(Rect2(-30000, -30000, 20000, 20000));
             chunkinator->generate();
         }
     }
@@ -23,32 +46,42 @@ void ChunkinatorTest::_bind_methods() {
 void ChunkinatorTest::_notification(int p_what) {
     switch (p_what) {
         case NOTIFICATION_READY: {
-            chunkinator.instantiate();
-            Ref<TerrainHeightmapLayer> A_Layer;
-            Ref<RandomPointLayer> B_Layer;
-            Ref<TerrainRoadConnectionLayer> C_Layer;
-            Ref<ChunkinatorTestLayer> D_Layer;
-            
-            A_Layer.instantiate();
-            B_Layer.instantiate();
-            C_Layer.instantiate();
-            D_Layer.instantiate();
-            
-            const StringName a_layer_name = "Heightmap";
-            const StringName b_layer_name = "Road Random Points";
-            const StringName c_layer_name = "Road Connections";
+            plane_mesh = LODMesh::generate_mesh(mesh_quality);
 
-            chunkinator->insert_layer(a_layer_name, A_Layer);
+            chunkinator.instantiate();
+            manager = memnew(TerrainManager);
+            add_child(manager);
+            manager->set_chunkinator(chunkinator);
+            Ref<TerrainHeightmapLayer> Heightmap_Layer;
+            Ref<RandomPointLayer> B_Layer;
+            Ref<TerrainRoadConnectionLayer> Road_connection_Layer;
+            Ref<TerrainFinalCombineLayer> heightmap_combine_layer;
+            
+            Heightmap_Layer.instantiate();
+            B_Layer.instantiate();
+            Road_connection_Layer.instantiate();
+            heightmap_combine_layer.instantiate();
+            
+            const StringName heightmap_layer_name = "Heightmap Layer";
+            const StringName heightmap_combine_layer_name = "Heightmap Combine Layer";
+            const StringName b_layer_name = "Road Random Points";
+            const StringName road_connection_layer_name = "Road Connections";
+
+            chunkinator->insert_layer(heightmap_layer_name, Heightmap_Layer);
             chunkinator->insert_layer(b_layer_name, B_Layer);
-            chunkinator->insert_layer(c_layer_name, C_Layer);
+            chunkinator->insert_layer(road_connection_layer_name, Road_connection_Layer);
+            chunkinator->insert_layer(heightmap_combine_layer_name, heightmap_combine_layer);
             //chunkinator->insert_layer("C Layer", C_Layer);
             //chunkinator->insert_layer("D Layer", D_Layer);
 
-            chunkinator->add_layer_dependency(a_layer_name, c_layer_name, Vector2i(50, 50));
-            chunkinator->add_layer_dependency(b_layer_name, c_layer_name, Vector2i(3000, 3000));
+            chunkinator->add_layer_dependency(heightmap_layer_name, road_connection_layer_name, Vector2i(50, 50));
+            chunkinator->add_layer_dependency(b_layer_name, road_connection_layer_name, Vector2i(3000, 3000));
+            chunkinator->add_layer_dependency(road_connection_layer_name, heightmap_combine_layer_name, Vector2i(1, 1));
             //chunkinator->add_layer_dependency(a_layer_name, "C Layer", Vector2i());
             //chunkinator->add_layer_dependency(b_layer_name, "D Layer", Vector2i());
             //chunkinator->add_layer_dependency("C Layer", "D Layer", Vector2i());
+
+            modified_heightmap_layer = Road_connection_Layer;
 
             chunkinator->build();
             chunkinator->set_generation_rect(Rect2(-10000, -10000, 20000, 20000));
@@ -56,22 +89,39 @@ void ChunkinatorTest::_notification(int p_what) {
             Window *w = memnew(Window);
             add_child(w);
             w->hide();
-            w->set_force_native(true);
+            w->set_force_native(false);
             w->show();
             w->set_size(Vector2(512, 512));
             debugger = memnew(ChunkinatorDebugger);
             w->add_child(debugger);
             debugger->set_chunkinator(chunkinator);
             debugger->set_anchors_and_offsets_preset(Control::PRESET_FULL_RECT);
+
+
+            chunkinator->connect("generation_completed", callable_mp(this, &ChunkinatorTest::_on_generation_completed));
+
+            Window *qt_window = memnew(Window);
+            SegmentQuadTreeDebug *qtd = memnew(SegmentQuadTreeDebug);
+            qt_window->add_child(qtd);
+            add_child(qt_window);
+            qtd->set_anchors_and_offsets_preset(Control::PRESET_FULL_RECT);
         } break;
         case NOTIFICATION_PROCESS: {
             chunkinator->process_generation();
+            Camera3D *cam = get_viewport()->get_camera_3d();
+            if (cam != nullptr) {
+                manager->set_camera_position(cam->get_global_position());
+            }
+            manager->update();
         } break;
     }
 }
 
 ChunkinatorTest::ChunkinatorTest() {
     set_process(true);
+}
+
+ChunkinatorTest::~ChunkinatorTest() {
 }
 
 int ChunkinatorTestLayer::get_chunk_size() const {

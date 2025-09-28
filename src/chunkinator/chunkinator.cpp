@@ -320,6 +320,7 @@ void Chunkinator::process_generation() {
             generation_data.debug_snapshot->generation_rect = generation_data.generation_rect;
             emit_signal("debug_snapshot_created", generation_data.debug_snapshot);
         }
+        emit_signal("generation_completed");
         return;
     }
 
