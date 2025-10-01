@@ -161,6 +161,7 @@ void ChunkinatorDebugLayerViewer::_notification(int p_what) {
                 draw_rect(draw_trf.xform(layer_snapshot.generation_rect_with_padding), Color(1.0, 1.0, 0.0), false);
             }
             draw_rect(draw_trf.xform(generation_rect), Color(1.0, 0.0, 1.0), false);
+            draw_circle(draw_trf.xform(generation_rect.get_center()), draw_trf.get_scale().x * 15000, Color(1.0, 0.0, 0.0), false);
         } break;
     }
 }

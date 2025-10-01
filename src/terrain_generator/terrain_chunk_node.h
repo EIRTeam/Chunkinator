@@ -6,6 +6,7 @@
 #include "godot_cpp/classes/node3d.hpp"
 #include "godot_cpp/classes/shader_material.hpp"
 #include "godot_cpp/classes/shape3d.hpp"
+#include "godot_cpp/classes/static_body3d.hpp"
 #include "godot_cpp/classes/worker_thread_pool.hpp"
 #include "godot_cpp/templates/hash_map.hpp"
 #include "lod_mesh.h"
@@ -23,6 +24,8 @@ class TerrainChunkNode : public Node3D {
     struct TerrainChunkInformation {
         MeshInstance3D *mesh_instance = nullptr;
         Ref<Shape3D> shape;
+        StaticBody3D *body = nullptr;
+        CollisionShape3D *collision_shape = nullptr;
         ChunkStatus status = ChunkStatus::NEEDS_INSTANCING;
         bool lod_mask_needs_updating = true;
         BitField<LODMesh::LODMask> lod_mask = 0;

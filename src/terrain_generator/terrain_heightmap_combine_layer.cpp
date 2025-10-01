@@ -9,7 +9,7 @@
 #include <limits>
 
 int TerrainFinalCombineLayer::get_chunk_size() const {
-    return 4096;
+    return 2048;
 }
 
 Ref<ChunkinatorChunk> TerrainFinalCombineLayer::instantiate_chunk() {
@@ -19,10 +19,30 @@ Ref<ChunkinatorChunk> TerrainFinalCombineLayer::instantiate_chunk() {
     return chunk;
 }
 
-double TerrainFinalCombineLayer::sample_height(Vector2 p_world_position) const {
-    ZoneScoped;
-    Ref<TerrainHeightmapLayer> heightmap_l = get_heightmap_layer();
-    return heightmap_l->sample_height(p_world_position) * 1000.0;
+float TerrainFinalCombineLayer::sample_height(const Vector2 &p_world_position) const {
+    FuncProfile;
+    float height = 0.0f;
+    
+    float dist_to_road = 0.0f;
+    Vector2 closest_point;
+    SegmentQuadtree::QuadTreeSegment segment;    
+    
+    const bool has_closest_segment = get_road_connection_layer()->get_distance_to_closest_road_segment(p_world_position, segment, &dist_to_road, &closest_point);
+
+    const float multiplier = 1000.0f;
+
+    if (has_closest_segment && dist_to_road < 250.0f) {
+        height = heightmap_layer->sample_height(closest_point) * multiplier;
+        if (dist_to_road > 150.0f) {
+            float our_height = heightmap_layer->sample_height(p_world_position) * multiplier;
+            float blend_factor = Math::inverse_lerp(150.0f, 250.0f, dist_to_road);
+            height = Math::lerp(height, our_height, blend_factor * blend_factor);
+        }
+    } else {
+        height = heightmap_layer->sample_height(p_world_position) * multiplier;
+    }
+    
+    return height;
 }
 
 Ref<TerrainHeightmapLayer> TerrainFinalCombineLayer::get_heightmap_layer() const {
@@ -43,23 +63,40 @@ Ref<TerrainRoadConnectionLayer> TerrainFinalCombineLayer::get_road_connection_la
 
 void TerrainFinalCombineChunk::generate() {
     FuncProfile;
-    height_map.instantiate();
     const Rect2 rect = get_chunk_bounds();
+    Ref<TerrainRoadConnectionLayer> road_connection_layer = layer->get_road_connection_layer();
+    
+    road_sdf = Image::create_empty(road_sdf_size, road_sdf_size, false, Image::FORMAT_RF);
+    for (int x = 0; x < road_sdf_size; x++) {
+        double sample_x = rect.position.x + rect.size.x * (x / (float)(road_sdf_size-1));
+        for (int y = 0; y < road_sdf_size; y++) {
+            const Vector2 point_to_sample = Vector2(sample_x, rect.position.y + rect.size.y * (y / (float)(road_sdf_size-1)));
+            float distance = 0.0f;
+            SegmentQuadtree::QuadTreeSegment segment;
+            
+            if (!road_connection_layer->get_distance_to_closest_road_segment(point_to_sample, segment, &distance)) {
+                distance = std::numeric_limits<float>::max();       
+            }
+
+            road_sdf->set_pixel(x, y, Color(distance, 0.0, 0.0));
+        }
+    }
+
+    height_map.instantiate();
     height_map = Image::create_empty(heightmap_size, heightmap_size, false, Image::FORMAT_RGBAF);
     Ref<TerrainHeightmapLayer> heightmap_layer = layer->get_heightmap_layer();
-    Ref<TerrainRoadConnectionLayer> road_connection_layer = layer->get_road_connection_layer();
     for (int x = 0; x < heightmap_size; x++) {
         double sample_x = rect.position.x + rect.size.x * (x / (float)(heightmap_size-1));
         for (int y = 0; y < heightmap_size; y++) {
             const Vector2 point_to_sample = Vector2(sample_x, rect.position.y + rect.size.y * (y / (float)(heightmap_size-1)));
-            double height = heightmap_layer->sample_height(point_to_sample) * 1000.0f;
+            double height = layer->sample_height(point_to_sample);
             
             const double SAMPLE_NUDGE = 50.0;
 
-            const double hL = heightmap_layer->sample_height(point_to_sample - Vector2(SAMPLE_NUDGE, 0.0)) * 1000.0f;
-            const double hR = heightmap_layer->sample_height(point_to_sample + Vector2(SAMPLE_NUDGE, 0.0)) * 1000.0f;
-            const double hD = heightmap_layer->sample_height(point_to_sample - Vector2(0.0, SAMPLE_NUDGE)) * 1000.0f;
-            const double hU = heightmap_layer->sample_height(point_to_sample + Vector2(0.0, SAMPLE_NUDGE)) * 1000.0f;
+            const double hL = layer->sample_height(point_to_sample - Vector2(SAMPLE_NUDGE, 0.0));
+            const double hR = layer->sample_height(point_to_sample + Vector2(SAMPLE_NUDGE, 0.0));
+            const double hD = layer->sample_height(point_to_sample - Vector2(0.0, SAMPLE_NUDGE));
+            const double hU = layer->sample_height(point_to_sample + Vector2(0.0, SAMPLE_NUDGE));
 
             // deduce terrain normal
             Vector3 normal;
@@ -69,22 +106,6 @@ void TerrainFinalCombineChunk::generate() {
             normal.normalize();
             
             height_map->set_pixel(x, y, Color(normal.x, normal.y, normal.z, height));
-        }
-    }
-
-    road_sdf = Image::create_empty(road_sdf_size, road_sdf_size, false, Image::FORMAT_RF);
-    for (int x = 0; x < road_sdf_size; x++) {
-        double sample_x = rect.position.x + rect.size.x * (x / (float)(heightmap_size-1));
-        for (int y = 0; y < road_sdf_size; y++) {
-            const Vector2 point_to_sample = Vector2(sample_x, rect.position.y + rect.size.y * (y / (float)(heightmap_size-1)));
-            float distance = 0.0f;
-            SegmentQuadtree::QuadTreeSegment segment;
-            
-            if (!road_connection_layer->get_distance_to_closest_road_segment(point_to_sample, distance, segment)) {
-                distance = std::numeric_limits<float>::max();       
-            }
-
-            road_sdf->set_pixel(x, y, Color(distance, 0.0, 0.0));
         }
     }
 }

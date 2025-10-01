@@ -4,6 +4,7 @@
 #include "chunkinator/chunkinator_layer.h"
 #include "godot_cpp/classes/fast_noise_lite.hpp"
 #include "godot_cpp/classes/image.hpp"
+#include "profiling.h"
 #include "terrain_generator/terrain_heightmap.h"
 #include "terrain_generator/terrain_roads.h"
 
@@ -15,7 +16,7 @@ class TerrainFinalCombineLayer : public ChunkinatorLayer {
 public:
     virtual int get_chunk_size() const override;
     virtual Ref<ChunkinatorChunk> instantiate_chunk() override;
-    double sample_height(Vector2 p_world_position) const;
+    float sample_height(const Vector2 &p_world_position) const;
     Ref<TerrainHeightmapLayer> get_heightmap_layer() const;
     Ref<TerrainRoadConnectionLayer> get_road_connection_layer() const;
 };
@@ -27,7 +28,7 @@ class TerrainFinalCombineChunk : public ChunkinatorChunk {
     Ref<ImageTexture> debug_road_sdf_texture;
     TerrainFinalCombineLayer *layer = nullptr;
     const int heightmap_size = 64;
-    const int road_sdf_size = 64;
+    const int road_sdf_size = 128;
 public:
     virtual void generate();
     virtual void debug_draw(ChunkinatorDebugDrawer *p_debug_drawer) const;

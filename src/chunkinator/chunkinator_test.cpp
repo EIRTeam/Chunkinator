@@ -48,8 +48,12 @@ void ChunkinatorTest::_notification(int p_what) {
         case NOTIFICATION_READY: {
             plane_mesh = LODMesh::generate_mesh(mesh_quality);
 
+            Ref<TerrainSettings> settings = ResourceLoader::get_singleton()->load("res://terrain_settings.tres");
+
+
             chunkinator.instantiate();
             manager = memnew(TerrainManager);
+            manager->set_terrain_settings(settings);
             add_child(manager);
             manager->set_chunkinator(chunkinator);
             Ref<TerrainHeightmapLayer> Heightmap_Layer;
@@ -84,7 +88,7 @@ void ChunkinatorTest::_notification(int p_what) {
             modified_heightmap_layer = Road_connection_Layer;
 
             chunkinator->build();
-            chunkinator->set_generation_rect(Rect2(-10000, -10000, 20000, 20000));
+            chunkinator->set_generation_rect(Rect2(-DRAW_DISTANCE, -DRAW_DISTANCE, DRAW_DISTANCE*2, DRAW_DISTANCE*2));
             chunkinator->generate();
             Window *w = memnew(Window);
             add_child(w);
@@ -107,8 +111,18 @@ void ChunkinatorTest::_notification(int p_what) {
             qtd->set_anchors_and_offsets_preset(Control::PRESET_FULL_RECT);
         } break;
         case NOTIFICATION_PROCESS: {
-            chunkinator->process_generation();
             Camera3D *cam = get_viewport()->get_camera_3d();
+
+            if (chunkinator->get_generation_state() == Chunkinator::ChunkinatorGenerationState::IDLING) {
+                Rect2 new_generation_rect = Rect2(-DRAW_DISTANCE, -DRAW_DISTANCE, DRAW_DISTANCE * 2, DRAW_DISTANCE * 2);
+                new_generation_rect.position += Vector2(cam->get_global_position().x, cam->get_global_position().z);
+                chunkinator->set_generation_rect(new_generation_rect);
+                chunkinator->generate();
+            } else {
+
+                chunkinator->process_generation();
+
+            }
             if (cam != nullptr) {
                 manager->set_camera_position(cam->get_global_position());
             }

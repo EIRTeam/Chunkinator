@@ -12,6 +12,7 @@
 #include "quadtree.h"
 #include "segment_quadtree.h"
 #include "terrain_generator/terrain_manager.h"
+#include "terrain_generator/terrain_settings.h"
 
 using namespace godot;
 
@@ -23,6 +24,8 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level)
 	GDREGISTER_CLASS(ExampleClass);
 	GDREGISTER_CLASS(QuadTree);
 	GDREGISTER_CLASS(ChunkinatorTest);
+	GDREGISTER_CLASS(TerrainSettings);
+	GDREGISTER_CLASS(TerrainHeightNoiseLayerSettings);
 	GDREGISTER_ABSTRACT_CLASS(Chunkinator);
 	GDREGISTER_ABSTRACT_CLASS(ChunkinatorDebugLayerViewer);
 	GDREGISTER_ABSTRACT_CLASS(ChunkinatorDebugger);

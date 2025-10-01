@@ -54,7 +54,7 @@ private:
 public:
     void initialize(Rect2i p_rect, const LocalVector<QuadTreeSegment> &p_segments);
 
-    int find_closest_segment(const Vector2 &p_point, float &r_distance) const;
+    int find_closest_segment(const Vector2 &p_point, float *r_distance = nullptr, Vector2 *r_closest_point = nullptr) const;
 
     QuadTreeSegment get_segment(int p_segment_idx) const;
     friend class SegmentQuadTreeDebug;

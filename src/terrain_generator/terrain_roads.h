@@ -14,7 +14,7 @@ public:
     Vector<Vector2> get_points_in_radius(Vector2 p_position, float p_radius) const;
     Vector<Vector2> get_points_in_bounds(Rect2 p_bounds) const;
     double get_height_at_position(Vector2 p_position) const;
-    bool get_distance_to_closest_road_segment(const Vector2 &p_position, float &r_distance, SegmentQuadtree::QuadTreeSegment &r_segment) const;
+    bool get_distance_to_closest_road_segment(const Vector2 &p_position, SegmentQuadtree::QuadTreeSegment &r_segment, float *r_distance = nullptr, Vector2 *r_closest_point = nullptr) const;
 };
 
 class TerrainRoadConnectionChunk : public ChunkinatorChunk {
@@ -31,7 +31,7 @@ public:
     const float ROAD_WIDTH = 3.0f;
     virtual void generate() override;
 	virtual void debug_draw(ChunkinatorDebugDrawer *p_debug_drawer) const override;
-    bool get_distance_to_closest_road_segment(Vector2 p_position, SegmentQuadtree::QuadTreeSegment &r_segment, float &r_distance) const;
+    bool get_distance_to_closest_road_segment(Vector2 p_position, SegmentQuadtree::QuadTreeSegment &r_segment, float *r_distance = nullptr, Vector2 *r_closest_point = nullptr) const;
     Ref<Image> get_heightmap() const;
 	friend class TerrainRoadConnectionLayer;
 };

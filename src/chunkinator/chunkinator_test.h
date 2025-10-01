@@ -23,6 +23,7 @@ public:
 
 class ChunkinatorTest : public Node3D {
     GDCLASS(ChunkinatorTest, Node3D);
+    const int DRAW_DISTANCE = 7500;
     ChunkinatorDebugger *debugger = nullptr;
     Ref<ChunkinatorLayer> modified_heightmap_layer;
     HashMap<Vector2i, TerrainChunkNode*> superchunk_meshes;

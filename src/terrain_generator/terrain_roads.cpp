@@ -1,4 +1,5 @@
 #include "terrain_roads.h"
+#include "godot_cpp/classes/a_star_grid2d.hpp"
 #include "godot_cpp/core/math.hpp"
 #include "godot_cpp/core/print_string.hpp"
 #include "godot_cpp/templates/local_vector.hpp"
@@ -77,9 +78,9 @@ void sort_by_dist_to_point(Vector2 p_point, Vector<Vector2> &ri_points) {
     ri_points = positions;
 }
 
-bool TerrainRoadConnectionLayer::get_distance_to_closest_road_segment(const Vector2 &p_position, float &r_distance, SegmentQuadtree::QuadTreeSegment &r_segment) const {
+bool TerrainRoadConnectionLayer::get_distance_to_closest_road_segment(const Vector2 &p_position, SegmentQuadtree::QuadTreeSegment &r_segment, float *r_distance, Vector2 *r_closest_point) const {
     Ref<TerrainRoadConnectionChunk> chunk = get_chunk_in_position(p_position);
-    return chunk->get_distance_to_closest_road_segment(p_position, r_segment, r_distance);
+    return chunk->get_distance_to_closest_road_segment(p_position, r_segment, r_distance, r_closest_point);
 }
 
 void TerrainRoadConnectionChunk::generate() {
@@ -111,13 +112,25 @@ void TerrainRoadConnectionChunk::generate() {
         }
     }
 
-    LocalVector<SegmentQuadtree::QuadTreeSegment> segments;
+    LocalVector<SegmentQuadtree::QuadTreeSegment> base_segments;
 
     for (int i = 0; i < connections.size(); i++) {
-        segments.push_back({.start = connections[i].from, .end = connections[i].to });
+        base_segments.push_back({.start = connections[i].from, .end = connections[i].to });
     }
 
-    quad_tree.initialize(get_chunk_bounds().grow(4096), segments);
+
+    for (int i = 0; i < connections.size(); i++) {
+        /*Ref<AStarGrid2D> astar_grid;
+        astar_grid.instantiate();
+        Vector2 diff = connections[i].to - connections[i].from;
+        int max_axis = Math::ceil(diff[diff.max_axis_index()]);
+        astar_grid->set_region(Rect2i(Vector2i(connections[i].from), Vector2i(max_axis+1, max_axis+1)));
+        astar_grid->set_cell_size(Vector2(64, 64));
+        astar_grid->update();
+        astar_grid->get_id_path(connections[i].from, connections[i].to);*/
+    }
+
+    quad_tree.initialize(get_chunk_bounds().grow(4096), base_segments);
 }
 
 void TerrainRoadConnectionChunk::debug_draw(ChunkinatorDebugDrawer *p_debug_drawer) const {
@@ -129,8 +142,8 @@ void TerrainRoadConnectionChunk::debug_draw(ChunkinatorDebugDrawer *p_debug_draw
         p_debug_drawer->draw_line(connections[i].from, connections[i].to);
     }
 };
-bool TerrainRoadConnectionChunk::get_distance_to_closest_road_segment(Vector2 p_position, SegmentQuadtree::QuadTreeSegment &r_segment, float &r_distance) const {
-    int segment = quad_tree.find_closest_segment(p_position, r_distance);
+bool TerrainRoadConnectionChunk::get_distance_to_closest_road_segment(Vector2 p_position, SegmentQuadtree::QuadTreeSegment &r_segment, float *r_distance, Vector2 *r_closest_point) const {
+    int segment = quad_tree.find_closest_segment(p_position, r_distance, r_closest_point);
     if (segment != -1) {
         r_segment = quad_tree.get_segment(segment);
         return true;

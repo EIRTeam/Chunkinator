@@ -45,12 +45,12 @@ class Chunkinator : public RefCounted {
         StringName parent;
         StringName child;
     };
-
+public:
     enum ChunkinatorGenerationState {
         GENERATING,
         IDLING
     };
-
+private:
     struct ChunkinatorTask {
         enum TaskState {
             WORKING,
@@ -63,9 +63,10 @@ class Chunkinator : public RefCounted {
     };
 
     struct ChunkinatorGenerationData {
-        LocalVector<ChunkinatorTask> current_tasks;
+        LocalVector<LocalVector<ChunkinatorTask>> tasks_per_level;
         Ref<ChunkinatorDebugSnapshot> debug_snapshot;
         int current_level = 0;
+        int task_count = 0;
         Rect2i generation_rect;
     };
     
@@ -95,6 +96,8 @@ public:
     void finish_generation();
     void process_generation();
     void set_generation_rect(Rect2i p_generation_rect);
+    void generate_tasks();
+    ChunkinatorGenerationState get_generation_state() const;
 
     static void _bind_methods();
 

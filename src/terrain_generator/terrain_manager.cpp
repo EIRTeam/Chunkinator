@@ -23,7 +23,7 @@ void TerrainManager::_on_generation_completed() {
             add_child(superchunk.node);
             Ref<ImageTexture> height_texture = ImageTexture::create_from_image(chunk->get_height_map());
             Ref<ImageTexture> road_sdf_texture = ImageTexture::create_from_image(chunk->get_road_sdf());
-            Ref<ShaderMaterial> mat = ResourceLoader::get_singleton()->load("res://test_shader.tres");
+            Ref<ShaderMaterial> mat = settings->get_terrain_material();
             superchunk.node->initialize({
                 .superchunk_size = chunk->get_chunk_bounds().size.x,
                 .chunk_idx = chunk_idx,
@@ -68,6 +68,10 @@ void TerrainManager::_unload_superchunk(const Vector2i &p_idx) {
 
 void TerrainManager::set_camera_position(Vector3 p_camera_position) {
     camera_position = p_camera_position;
+}
+
+void TerrainManager::set_terrain_settings(const Ref<TerrainSettings> &p_settings) {
+    settings = p_settings;
 }
 
 Ref<TerrainFinalCombineLayer> TerrainManager::get_terrain_layer() const {

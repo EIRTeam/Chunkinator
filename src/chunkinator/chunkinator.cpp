@@ -156,9 +156,38 @@ void Chunkinator::generate() {
     if (state == ChunkinatorGenerationState::GENERATING) {
         return;
     }
-    state = ChunkinatorGenerationState::GENERATING;
     generation_data = {};
     recalculate_bounds();
+    generate_tasks();
+
+    if (generation_data.task_count == 0) {
+        return;
+    }
+
+    // Unload now unnecessary chunks
+
+    for (int level = 0; level <= max_dag_level; level++) {
+        for (int i = 0; i < layers.size(); i++) {
+            Ref<ChunkinatorLayer> layer = layers[i];
+            if (layer->dag_level != level) {
+                continue;
+            }
+            const ChunkinatorBounds idx_bounds = layer->chunk_idx_bounds_to_generate;
+            // Unload chunks not within our bounds
+            for (int chunk_i = layer->chunks.size()-1; chunk_i >= 0; chunk_i--) {
+                const Vector2i chunk_idx = layer->chunks[chunk_i]->get_chunk_index();
+                if (!idx_bounds.is_chunk_in_bounds(chunk_idx)) {
+                    if (generation_data.debug_snapshot.is_valid()) {
+                        generation_data.debug_snapshot->per_layer_debug_data[i].deleted_chunks.push_back(layer->chunks[chunk_i]->get_chunk_index());
+                        generation_data.debug_snapshot->per_layer_debug_data[i].chunks.push_back(layer->chunks[chunk_i]->get_chunk_index());
+                    }
+                    layer->chunks.remove_at(chunk_i);
+                }
+            }
+        }
+    }
+
+    state = ChunkinatorGenerationState::GENERATING;
     if (capture_debug_snapshot) {
         generation_data.debug_snapshot.instantiate();
         generation_data.debug_snapshot->per_layer_debug_data.reserve(layers.size());
@@ -168,6 +197,8 @@ void Chunkinator::generate() {
             });
         }
     }
+
+
     start_task_for_level(0);
 }
 
@@ -188,67 +219,18 @@ void Chunkinator::insert_layer(StringName p_layer_name, Ref<ChunkinatorLayer> p_
 
 void Chunkinator::start_task_for_level(int p_level) {
     generation_data.current_level = p_level;
-    generation_data.current_tasks.clear();
+    LocalVector<ChunkinatorTask> &tasks_per_level = generation_data.tasks_per_level[p_level];
 
-    LocalVector<ChunkinatorTask> tasks_to_schedule;
-
-    for (int i = 0; i < layers.size(); i++) {
-        Ref<ChunkinatorLayer> layer = layers[i];
-        if (layer->dag_level != p_level) {
-            continue;
-        }
-        const ChunkinatorBounds idx_bounds = layer->chunk_idx_bounds_to_generate;
-        // Unload chunks not within our bounds
-        for (int chunk_i = layer->chunks.size()-1; chunk_i >= 0; chunk_i--) {
-            const Vector2i chunk_idx = layer->chunks[chunk_i]->get_chunk_index();
-            if (!idx_bounds.is_chunk_in_bounds(chunk_idx)) {
-                if (generation_data.debug_snapshot.is_valid()) {
-                    generation_data.debug_snapshot->per_layer_debug_data[i].deleted_chunks.push_back(layer->chunks[chunk_i]->get_chunk_index());
-                    generation_data.debug_snapshot->per_layer_debug_data[i].chunks.push_back(layer->chunks[chunk_i]->get_chunk_index());
-                    Time *t = Time::get_singleton();
-                }
-                layer->chunks.remove_at(chunk_i);
-            }
-        }
-
-        // Instantiate new chunks
-        ChunkinatorTask task = {
-            .layer = layer
-        };
-        const int chunk_size = layer->get_chunk_size();
-        for (int x = idx_bounds.min_chunk.x; x <= idx_bounds.max_chunk.x; x++) {
-            for (int y = idx_bounds.min_chunk.y; y <= idx_bounds.max_chunk.y; y++) {
-                if (layer->get_chunk_by_index(Vector2i(x, y)).is_valid()) {
-                    continue;
-                }
-                Ref<ChunkinatorChunk> chunk = layer->instantiate_chunk();
-                chunk->chunk_idx = Vector2(x, y);
-                chunk->world_bounds = Rect2i(chunk->chunk_idx * chunk_size, Vector2i(chunk_size, chunk_size));
-                task.chunks.push_back(chunk);
-                layer->chunks.push_back(chunk);
-            }
-        }
-
-        // Dispatch the tasks
-        if (task.chunks.is_empty()) {
-            continue;
-        }
-
-        tasks_to_schedule.push_back(task);
-    }
-
-    generation_data.current_tasks = tasks_to_schedule;
-
-    if (tasks_to_schedule.is_empty()) {
+    if (tasks_per_level.is_empty()) {
         process_generation();
         return;
     }
 
     WorkerThreadPool *wtp = WorkerThreadPool::get_singleton();
 
-    for (int i = 0; i < generation_data.current_tasks.size(); i++) {
-        generation_data.current_tasks[i].task_id = wtp->add_native_group_task(&Chunkinator::_generation_task, &generation_data.current_tasks.ptr()[i], generation_data.current_tasks[i].chunks.size());
-        print_line(vformat("Dispatched task for layer %s!", generation_data.current_tasks[i].layer->name));
+    for (int i = 0; i < tasks_per_level.size(); i++) {
+        tasks_per_level[i].task_id = wtp->add_native_group_task(&Chunkinator::_generation_task, &tasks_per_level.ptr()[i], tasks_per_level[i].chunks.size());
+        print_line(vformat("Dispatched task for layer %s!", tasks_per_level[i].layer->name));
     }
 
 }
@@ -260,12 +242,12 @@ void Chunkinator::process_generation() {
 
     bool all_done = true;
     WorkerThreadPool *wtp = WorkerThreadPool::get_singleton();
-    for (int i = 0; i < generation_data.current_tasks.size(); i++) {
-        if (generation_data.current_tasks[i].task_state == ChunkinatorTask::COMPLETED) {
+    LocalVector<ChunkinatorTask> &tasks_for_level = generation_data.tasks_per_level[generation_data.current_level];
+    for (int i = 0; i < tasks_for_level.size(); i++) {
+        if (tasks_for_level[i].task_state == ChunkinatorTask::COMPLETED) {
             continue;
         }
-        
-        const bool task_completed = wtp->is_group_task_completed(generation_data.current_tasks[i].task_id);
+        const bool task_completed = wtp->is_group_task_completed(tasks_for_level[i].task_id);
         
         if (!task_completed) {
             all_done = false;
@@ -274,36 +256,37 @@ void Chunkinator::process_generation() {
 
         // Task is done!
 
-        for (Ref<ChunkinatorChunk> chunk : generation_data.current_tasks[i].chunks) {
-            generation_data.current_tasks[i].layer->chunks.push_back(chunk);
+        for (Ref<ChunkinatorChunk> chunk : tasks_for_level[i].chunks) {
+            tasks_for_level[i].layer->chunks.push_back(chunk);
         }
 
-        wtp->wait_for_group_task_completion(generation_data.current_tasks[i].task_id);
+        wtp->wait_for_group_task_completion(tasks_for_level[i].task_id);
+        tasks_for_level[i].task_state = ChunkinatorTask::COMPLETED;
         
         // debug stuff
         if (!capture_debug_snapshot || !generation_data.debug_snapshot.is_valid()) {
             continue;
         }
 
-        const int layer_idx = layers.find(generation_data.current_tasks[i].layer);
+        const int layer_idx = layers.find(tasks_for_level[i].layer);
         ChunkinatorLayerDebugSnapshot &debug_data = generation_data.debug_snapshot->per_layer_debug_data[layer_idx];
-        debug_data.layer = generation_data.current_tasks[i].layer;
-        debug_data.generation_rect_with_padding = generation_data.current_tasks[i].layer->debug_world_rect_with_padding;
+        debug_data.layer = tasks_for_level[i].layer;
+        debug_data.generation_rect_with_padding = tasks_for_level[i].layer->debug_world_rect_with_padding;
         Time *t = Time::get_singleton();
 
-        debug_data.chunks.reserve(generation_data.current_tasks[i].layer->chunks.size());
-        for (Ref<ChunkinatorChunk> chunk : generation_data.current_tasks[i].layer->chunks) {
+        debug_data.chunks.reserve(tasks_for_level[i].layer->chunks.size());
+        for (Ref<ChunkinatorChunk> chunk : tasks_for_level[i].layer->chunks) {
             debug_data.chunks.push_back(chunk->get_chunk_index());
             chunk->debug_draw(&debug_data.drawer);
         }
 
-        debug_data.newly_generated_chunks.reserve(generation_data.current_tasks[i].chunks.size());
-        for (Ref<ChunkinatorChunk> chunk : generation_data.current_tasks[i].chunks) {
+        debug_data.newly_generated_chunks.reserve(tasks_for_level[i].chunks.size());
+        for (Ref<ChunkinatorChunk> chunk : tasks_for_level[i].chunks) {
             debug_data.newly_generated_chunks.push_back(chunk->get_chunk_index());
             debug_data.average_generation_time_usec += chunk->generation_duration;
         }
 
-        debug_data.average_generation_time_usec /= generation_data.current_tasks[i].chunks.size();
+        debug_data.average_generation_time_usec /= tasks_for_level[i].chunks.size();
 
         print_line("Debug Data OK!");
     }
@@ -331,6 +314,64 @@ void Chunkinator::process_generation() {
 
 void Chunkinator::set_generation_rect(Rect2i p_generation_rect) {
     generation_rect = p_generation_rect;
+}
+
+void Chunkinator::generate_tasks() {
+    generation_data.task_count = 0;
+    generation_data.tasks_per_level.clear();
+    generation_data.tasks_per_level.resize(max_dag_level+1);
+    for (int level = 0; level <= max_dag_level; level++) {
+        for (int i = 0; i < layers.size(); i++) {
+            Ref<ChunkinatorLayer> layer = layers[i];
+            if (layer->dag_level != level) {
+                continue;
+            }
+            const ChunkinatorBounds idx_bounds = layer->chunk_idx_bounds_to_generate;
+            /*// Unload chunks not within our bounds
+            for (int chunk_i = layer->chunks.size()-1; chunk_i >= 0; chunk_i--) {
+                const Vector2i chunk_idx = layer->chunks[chunk_i]->get_chunk_index();
+                if (!idx_bounds.is_chunk_in_bounds(chunk_idx)) {
+                    if (generation_data.debug_snapshot.is_valid()) {
+                        generation_data.debug_snapshot->per_layer_debug_data[i].deleted_chunks.push_back(layer->chunks[chunk_i]->get_chunk_index());
+                        generation_data.debug_snapshot->per_layer_debug_data[i].chunks.push_back(layer->chunks[chunk_i]->get_chunk_index());
+                        Time *t = Time::get_singleton();
+                    }
+                    layer->chunks.remove_at(chunk_i);
+                }
+            }*/
+
+            // Instantiate new chunks
+            ChunkinatorTask task = {
+                .layer = layer
+            };
+            const int chunk_size = layer->get_chunk_size();
+            for (int x = idx_bounds.min_chunk.x; x <= idx_bounds.max_chunk.x; x++) {
+                for (int y = idx_bounds.min_chunk.y; y <= idx_bounds.max_chunk.y; y++) {
+                    if (layer->get_chunk_by_index(Vector2i(x, y)).is_valid()) {
+                        continue;
+                    }
+                    Ref<ChunkinatorChunk> chunk = layer->instantiate_chunk();
+                    chunk->chunk_idx = Vector2(x, y);
+                    chunk->world_bounds = Rect2i(chunk->chunk_idx * chunk_size, Vector2i(chunk_size, chunk_size));
+                    task.chunks.push_back(chunk);
+                    layer->chunks.push_back(chunk);
+                }
+            }
+
+            // Dispatch the tasks
+            if (task.chunks.is_empty()) {
+                continue;
+            }
+
+            generation_data.tasks_per_level[level].push_back(task);
+            generation_data.task_count++;
+        }
+    }
+
+}
+
+Chunkinator::ChunkinatorGenerationState Chunkinator::get_generation_state() const {
+    return state;
 }
 
 void Chunkinator::_bind_methods() {

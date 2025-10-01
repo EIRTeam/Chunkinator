@@ -92,7 +92,7 @@ void SegmentQuadtree::initialize(Rect2i p_tree_world_rect, const LocalVector<Qua
 
     _insert_child_segments(0, segment_indices);
 }
-int SegmentQuadtree::find_closest_segment(const Vector2 &p_world_point, float &r_distance) const {
+int SegmentQuadtree::find_closest_segment(const Vector2 &p_world_point, float *r_distance, Vector2 *r_closest_point) const {
     FuncProfile;
     if (!tree_world_rect.has_point(p_world_point)) {
         return -1;
@@ -114,6 +114,7 @@ int SegmentQuadtree::find_closest_segment(const Vector2 &p_world_point, float &r
 
     float closest_segment_distance_squared = std::numeric_limits<float>::max();
     int closest_segment_idx = -1;
+    Vector2 closest_segment_point;
 
     HashSet<int> visited_nodes;
     HashSet<int> visited_segments;
@@ -132,10 +133,12 @@ int SegmentQuadtree::find_closest_segment(const Vector2 &p_world_point, float &r
                     continue;
                 }
                 const QuadTreeSegment &segment = segments[segment_idx];
-                const float dist_sq_to_segment = Geometry::get_distance_to_segment_squared(p_world_point, segment.start, segment.end);
+                Vector2 point = Geometry::get_closest_point_to_segment(p_world_point, segment.start, segment.end);
+                const float dist_sq_to_segment = p_world_point.distance_squared_to(point);
                 if (dist_sq_to_segment < closest_segment_distance_squared) {
                     closest_segment_distance_squared = dist_sq_to_segment;
                     closest_segment_idx = segment_idx;
+                    closest_segment_point = point;
                 }
                 visited_segments.insert(segment_idx);
             }
@@ -169,7 +172,13 @@ int SegmentQuadtree::find_closest_segment(const Vector2 &p_world_point, float &r
     }
 
     if (closest_segment_idx != -1) {
-        r_distance = Math::sqrt(closest_segment_distance_squared);
+        if (r_distance !=  nullptr) {
+            *r_distance = Math::sqrt(closest_segment_distance_squared);
+        }
+        
+        if (r_closest_point != nullptr) {
+            *r_closest_point = closest_segment_point;
+        }
     }
 
     return closest_segment_idx;
@@ -236,7 +245,7 @@ void SegmentQuadTreeDebug::_notification(int p_what) {
             }
 
             float out_dist = 0.0f;
-            int closest_segment_idx = tree.find_closest_segment(test_point, out_dist);
+            int closest_segment_idx = tree.find_closest_segment(test_point, &out_dist);
 
             if (closest_segment_idx != -1) {
                 draw_circle(draw_trf.xform(test_point), draw_trf.get_scale().x * out_dist, Color(0.0, 0.0, 1.0), false);

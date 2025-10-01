@@ -1,6 +1,8 @@
 #include "terrain_chunk_node.h"
 #include "chunkinator/image_sampling.h"
+#include "godot_cpp/classes/collision_shape3d.hpp"
 #include "godot_cpp/classes/concave_polygon_shape3d.hpp"
+#include "godot_cpp/classes/static_body3d.hpp"
 #include "godot_cpp/classes/worker_thread_pool.hpp"
 #include "godot_cpp/core/error_macros.hpp"
 #include "godot_cpp/core/print_string.hpp"
@@ -73,7 +75,11 @@ void TerrainChunkNode::_generate_collision_meshes_task(uint32_t p_idx) {
             double u = sample_pos_local.x;
             double v = sample_pos_local.y;
 
-            vertices[idx] = Vector3(x_v * world_rect.size.x, bilinearly_sample_image_single_channel(heightmap, 3, Vector2(u, v)), y_v * world_rect.size.y);
+            if (world_rect.position == Vector2i() && current_chunk.position == Vector2i()) {
+                print_line(bilinearly_sample_image_single_channel(heightmap, 3, Vector2(u, v)));
+            }
+
+            vertices[idx] = Vector3(x_v * chunk_local_rect.size.x, bilinearly_sample_image_single_channel(heightmap, 3, Vector2(u, v)), y_v * chunk_local_rect.size.y);
         }
     }
 
@@ -137,6 +143,7 @@ void TerrainChunkNode::_check_quadtree_generation() {
 
 void TerrainChunkNode::_check_collision_mesh_generation() {
     WorkerThreadPool *wtp = WorkerThreadPool::get_singleton();
+    DEV_ASSERT(current_mesh_generation_task.task_id != -1);
     if (!wtp->is_group_task_completed(current_mesh_generation_task.task_id)) {
         return;
     }
@@ -161,10 +168,19 @@ void TerrainChunkNode::_check_collision_mesh_generation() {
         it.value.mesh_instance->set_instance_shader_parameter("side_size", it.key.size.x);
         it.value.mesh_instance->set_instance_shader_parameter("lod_depth", it.value.lod_depth);
         AABB aabb;
-        aabb.set_position(Vector3(0.0, -1500.0, 0.0));
-        aabb.set_size(Vector3(it.key.size.x, 3000.0, it.key.size.y));
+        aabb.set_position(Vector3(0.0, -3000.0, 0.0));
+        aabb.set_size(Vector3(it.key.size.x, 6000.0, it.key.size.y));
+        
         it.value.mesh_instance->set_custom_aabb(aabb);
+        
         it.value.status = ChunkStatus::DONE;
+
+        it.value.collision_shape = memnew(CollisionShape3D);
+        it.value.body = memnew(StaticBody3D);
+        it.value.body->add_child(it.value.collision_shape);
+        it.value.mesh_instance->add_child(it.value.body);
+        it.value.collision_shape->set_shape(it.value.shape);
+        //it.value.body->set_global_position(Vector3(world_rect.position.x +, 0.0, world_rect.position.y));
     }
 
     // ... and unload what we don't need
