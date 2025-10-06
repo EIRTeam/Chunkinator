@@ -8,33 +8,24 @@
 #include "terrain_generator/terrain_settings.h"
 
 void TerrainHeightmapChunk::generate() {
-    Ref<Image> img = Image::create_empty(DATA_SIZE, DATA_SIZE, false, Image::Format::FORMAT_RF);
 
     print_line("Building heightmap for", get_chunk_index());
+    Vector<Vector2> positions;
+    positions.resize(DATA_SIZE*DATA_SIZE);
 
+
+    Vector2 *positions_ptrw = positions.ptrw();
     for (int x = 0; x < DATA_SIZE; x++) {
         const double x_v = (x / (double)(DATA_SIZE-1));
         for  (int y = 0; y < DATA_SIZE; y++) {
             const double y_v = (y / (double)(DATA_SIZE-1));
-
-            Vector2 sample_center = get_chunk_bounds().position + (Vector2(x_v, y_v) * get_chunk_bounds().size);
-            /*const double SAMPLE_NUDGE = 50.0;
-
-            const double hL = layer->sample_noise(sample_center - Vector2(SAMPLE_NUDGE, 0.0));
-            const double hR = layer->sample_noise(sample_center + Vector2(SAMPLE_NUDGE, 0.0));
-            const double hD = layer->sample_noise(sample_center - Vector2(0.0, SAMPLE_NUDGE));
-            const double hU = layer->sample_noise(sample_center + Vector2(0.0, SAMPLE_NUDGE));
-
-            // deduce terrain normal
-            Vector3 normal;
-            normal.x = hL - hR;
-            normal.y = SAMPLE_NUDGE*2.0;
-            normal.z = hD - hU;
-            normal.normalize();*/
-
-            img->set_pixel(x, y, Color(layer->sample_noise(sample_center), 0, 0));
+            positions_ptrw[x + y * DATA_SIZE] = get_chunk_bounds().position + (Vector2(x_v, y_v) * get_chunk_bounds().size);
         }
     }
+
+    PackedByteArray data = layer->sample_noise_batched_bytes_f32(positions);
+
+    Ref<Image> img = Image::create_from_data(DATA_SIZE, DATA_SIZE, false, Image::Format::FORMAT_RF, data);
 
     heightmap = img;
     baked_heightmap.from_image(heightmap);
@@ -81,6 +72,38 @@ double TerrainHeightmapLayer::sample_noise(const Vector2 &p_world_position) cons
         height += height_layer->get_curve()->sample(height_layer->get_noise()->get_noise_2dv(p_world_position * 0.01));
     }
     return height;
+}
+
+Vector<double> TerrainHeightmapLayer::sample_noise_batched(const Vector<Vector2> &p_world_positions) const {
+    Vector<double> out_heights;
+    out_heights.resize(p_world_positions.size());
+    double *height_ptrw = out_heights.ptrw();
+
+    for (int h = 0; h < p_world_positions.size(); h++) {
+        float height = 0.0f;
+        for (int i = 0; i < settings->get_height_layer_count(); i++) {
+            Ref<TerrainHeightNoiseLayerSettings> height_layer = settings->get_height_layer(i);
+            height += height_layer->get_curve()->sample(height_layer->get_noise()->get_noise_2dv(p_world_positions[h] * 0.01));
+        }
+        height_ptrw[h] = height;
+    }
+    return out_heights;
+}
+
+PackedByteArray TerrainHeightmapLayer::sample_noise_batched_bytes_f32(const Vector<Vector2> &p_world_positions) const {
+    PackedByteArray out_heights;
+    out_heights.resize(p_world_positions.size() * sizeof(float));
+    float *height_ptrw = (float*)out_heights.ptrw();
+
+    for (int h = 0; h < p_world_positions.size(); h++) {
+        float height = 0.0f;
+        for (int i = 0; i < settings->get_height_layer_count(); i++) {
+            Ref<TerrainHeightNoiseLayerSettings> height_layer = settings->get_height_layer(i);
+            height += height_layer->get_curve()->sample(height_layer->get_noise()->get_noise_2dv(p_world_positions[h] * 0.01));
+        }
+        height_ptrw[h] = height;
+    }
+    return out_heights;
 }
 
 TerrainHeightmapLayer::TerrainHeightmapLayer() {

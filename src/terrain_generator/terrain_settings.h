@@ -41,7 +41,7 @@ class TerrainSettings : public Resource {
     int terrain_base_heightmap_size = 128;
 
     int geometry_chunk_size = 2048;
-    int geometry_chunk_heightmap_size = 64;
+    int geometry_chunk_heightmap_size = 128;
     int geometry_chunk_heightmap_texture_array_layer_count = 128;
     int geometry_chunks_spatial_map_size = 128;
 

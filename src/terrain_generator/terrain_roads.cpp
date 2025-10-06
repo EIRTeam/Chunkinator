@@ -2,6 +2,7 @@
 #include "godot_cpp/classes/a_star_grid2d.hpp"
 #include "godot_cpp/core/math.hpp"
 #include "godot_cpp/core/print_string.hpp"
+#include "godot_cpp/templates/hash_map.hpp"
 #include "godot_cpp/templates/local_vector.hpp"
 #include "profiling.h"
 #include "segment_quadtree.h"
@@ -83,6 +84,33 @@ bool TerrainRoadConnectionLayer::get_distance_to_closest_road_segment(const Vect
     return chunk->get_distance_to_closest_road_segment(p_position, r_segment, r_distance, r_closest_point);
 }
 
+Vector<TerrainRoadConnectionLayer::SegmentQueryResult> TerrainRoadConnectionLayer::get_distance_to_closest_road_segments_batched(const Vector<Vector2> &p_positions) const {
+    FuncProfile;
+    Vector<SegmentQueryResult> out;
+    out.resize(p_positions.size());
+    SegmentQueryResult *out_ptrw = out.ptrw();
+
+    HashMap<Vector2i, Vector<Vector2>> buckets;
+
+    for (int i = 0; i < p_positions.size(); i++) {
+        Ref<TerrainRoadConnectionChunk> chunk = get_chunk_in_position(p_positions[i]);
+        SegmentQuadtree::QuadTreeSegment segment;
+        float dist;
+        Vector2 closest_point;
+        bool valid = chunk->get_distance_to_closest_road_segment(p_positions[i], segment, &dist, &closest_point);
+
+        out_ptrw[i] = {
+            .from = segment.start,
+            .to = segment.end,
+            .closest_point = closest_point,
+            .distance = dist,
+            .valid = valid,
+        };
+    }
+
+    return out;
+}
+
 void TerrainRoadConnectionChunk::generate() {
     FuncProfile;
     Rect2 check_rect = get_chunk_bounds().grow(connection_radius);
@@ -143,7 +171,7 @@ void TerrainRoadConnectionChunk::debug_draw(ChunkinatorDebugDrawer *p_debug_draw
     }
 };
 bool TerrainRoadConnectionChunk::get_distance_to_closest_road_segment(Vector2 p_position, SegmentQuadtree::QuadTreeSegment &r_segment, float *r_distance, Vector2 *r_closest_point) const {
-    int segment = quad_tree.find_closest_segment(p_position, r_distance, r_closest_point);
+    int segment = quad_tree.find_closest_segment(p_position, 300, r_distance, r_closest_point);
     if (segment != -1) {
         r_segment = quad_tree.get_segment(segment);
         return true;

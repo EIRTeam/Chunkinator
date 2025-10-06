@@ -72,6 +72,7 @@ void ChunkinatorTest::_notification(int p_what) {
             const StringName road_connection_layer_name = "Road Connections";
 
             chunkinator->insert_layer(heightmap_layer_name, Heightmap_Layer);
+            heightmap_combine_layer->set_heightmap_size(settings->get_geometry_chunk_heightmap_size());
             chunkinator->insert_layer(b_layer_name, B_Layer);
             chunkinator->insert_layer(road_connection_layer_name, Road_connection_Layer);
             chunkinator->insert_layer(heightmap_combine_layer_name, heightmap_combine_layer);

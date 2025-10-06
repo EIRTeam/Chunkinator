@@ -15,6 +15,14 @@ public:
     Vector<Vector2> get_points_in_bounds(Rect2 p_bounds) const;
     double get_height_at_position(Vector2 p_position) const;
     bool get_distance_to_closest_road_segment(const Vector2 &p_position, SegmentQuadtree::QuadTreeSegment &r_segment, float *r_distance = nullptr, Vector2 *r_closest_point = nullptr) const;
+    struct SegmentQueryResult {
+        Vector2 from;
+        Vector2 to;
+        Vector2 closest_point;
+        float distance = 0.0f;
+        bool valid = false;
+    };
+    Vector<TerrainRoadConnectionLayer::SegmentQueryResult> get_distance_to_closest_road_segments_batched(const Vector<Vector2> &p_positions) const;
 };
 
 class TerrainRoadConnectionChunk : public ChunkinatorChunk {

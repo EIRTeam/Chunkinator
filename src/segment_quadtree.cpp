@@ -6,6 +6,7 @@
 #include "godot_cpp/classes/input.hpp"
 #include "godot_cpp/templates/hash_set.hpp"
 #include "profiling.h"
+#include <limits>
 #include <stack>
 Rect2i SegmentQuadtree::calculate_rect_for_pos(const Rect2i &p_parent_rect, NodePosition p_pos) {
     const int halfwidth = p_parent_rect.size.x / 2;
@@ -92,8 +93,11 @@ void SegmentQuadtree::initialize(Rect2i p_tree_world_rect, const LocalVector<Qua
 
     _insert_child_segments(0, segment_indices);
 }
-int SegmentQuadtree::find_closest_segment(const Vector2 &p_world_point, float *r_distance, Vector2 *r_closest_point) const {
+int SegmentQuadtree::find_closest_segment(const Vector2 &p_world_point, std::optional<float> p_max_radius, float *r_distance, Vector2 *r_closest_point) const {
     FuncProfile;
+
+    const float max_radius_squared = p_max_radius.has_value() ? *p_max_radius * *p_max_radius : std::numeric_limits<float>::max();
+    
     if (!tree_world_rect.has_point(p_world_point)) {
         return -1;
     }
@@ -165,6 +169,9 @@ int SegmentQuadtree::find_closest_segment(const Vector2 &p_world_point, float *r
             float dist_to_rect_squared = Geometry::distance_to_rect_squared(p_world_point, Rect2(nodes[child_idx].rect).get_center(), nodes[child_idx].rect.size.x);
 
             // Yes it could, we have to check it just in case.
+            if (dist_to_rect_squared > max_radius_squared) {
+                return -1;
+            }
             if (dist_to_rect_squared < closest_segment_distance_squared) {
                 node_queue.push(child_idx);
             }
@@ -245,7 +252,7 @@ void SegmentQuadTreeDebug::_notification(int p_what) {
             }
 
             float out_dist = 0.0f;
-            int closest_segment_idx = tree.find_closest_segment(test_point, &out_dist);
+            int closest_segment_idx = tree.find_closest_segment(test_point, std::nullopt, &out_dist);
 
             if (closest_segment_idx != -1) {
                 draw_circle(draw_trf.xform(test_point), draw_trf.get_scale().x * out_dist, Color(0.0, 0.0, 1.0), false);
