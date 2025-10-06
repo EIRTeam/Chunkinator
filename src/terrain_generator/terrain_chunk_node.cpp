@@ -75,7 +75,7 @@ void TerrainChunkNode::_generate_collision_meshes_task(uint32_t p_idx) {
             double u = sample_pos_local.x;
             double v = sample_pos_local.y;
 
-            vertices[idx] = Vector3(x_v * chunk_local_rect.size.x, bilinearly_sample_image_single_channel(heightmap, 3, Vector2(u, v)), y_v * chunk_local_rect.size.y);
+            vertices[idx] = Vector3(x_v * chunk_local_rect.size.x, bilinearly_sample_image_single_channel(heightmap, 0, Vector2(u, v)), y_v * chunk_local_rect.size.y);
         }
     }
 
