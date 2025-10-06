@@ -83,7 +83,7 @@ void TerrainFinalCombineChunk::generate() {
     }
 
     height_map.instantiate();
-    height_map = Image::create_empty(heightmap_size, heightmap_size, false, Image::FORMAT_RGBAF);
+    height_map = Image::create_empty(heightmap_size, heightmap_size, false, Image::FORMAT_RF);
     Ref<TerrainHeightmapLayer> heightmap_layer = layer->get_heightmap_layer();
     for (int x = 0; x < heightmap_size; x++) {
         double sample_x = rect.position.x + rect.size.x * (x / (float)(heightmap_size-1));
@@ -91,21 +91,7 @@ void TerrainFinalCombineChunk::generate() {
             const Vector2 point_to_sample = Vector2(sample_x, rect.position.y + rect.size.y * (y / (float)(heightmap_size-1)));
             double height = layer->sample_height(point_to_sample);
             
-            const double SAMPLE_NUDGE = 50.0;
-
-            const double hL = layer->sample_height(point_to_sample - Vector2(SAMPLE_NUDGE, 0.0));
-            const double hR = layer->sample_height(point_to_sample + Vector2(SAMPLE_NUDGE, 0.0));
-            const double hD = layer->sample_height(point_to_sample - Vector2(0.0, SAMPLE_NUDGE));
-            const double hU = layer->sample_height(point_to_sample + Vector2(0.0, SAMPLE_NUDGE));
-
-            // deduce terrain normal
-            Vector3 normal;
-            normal.x = hL - hR;
-            normal.y = SAMPLE_NUDGE*2.0;
-            normal.z = hD - hU;
-            normal.normalize();
-            
-            height_map->set_pixel(x, y, Color(normal.x, normal.y, normal.z, height));
+            height_map->set_pixel(x, y, Color(height, 0.0, 0.0, 0.0));
         }
     }
 }

@@ -1,0 +1,19 @@
+[gd_resource type="TerrainSettings" load_steps=5 format=3 uid="uid://ehbhese0dl7r"]
+
+[ext_resource type="Material" uid="uid://c5n2785qh2nk6" path="res://test_shader.tres" id="1_iqq4n"]
+
+[sub_resource type="Curve" id="Curve_75j7r"]
+_limits = [-1.0, 1.0, -1.0, 1.0]
+_data = [Vector2(-1, 1), 0.0, 0.0, 0, 0, Vector2(-0.789976, -0.63074195), 0.0, 0.0, 0, 0, Vector2(0.16945112, -0.5273851), 0.0, 0.0, 0, 0, Vector2(0.39379478, 0.039233565), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]
+point_count = 5
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_iqq4n"]
+fractal_type = 2
+
+[sub_resource type="TerrainHeightNoiseLayerSettings" id="TerrainHeightNoiseLayerSettings_rgo5q"]
+curve = SubResource("Curve_75j7r")
+noise = SubResource("FastNoiseLite_iqq4n")
+
+[resource]
+height_noise_layers = Array[TerrainHeightNoiseLayerSettings]([SubResource("TerrainHeightNoiseLayerSettings_rgo5q")])
+terrain_material = ExtResource("1_iqq4n")

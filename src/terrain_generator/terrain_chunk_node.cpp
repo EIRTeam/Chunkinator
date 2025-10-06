@@ -75,10 +75,6 @@ void TerrainChunkNode::_generate_collision_meshes_task(uint32_t p_idx) {
             double u = sample_pos_local.x;
             double v = sample_pos_local.y;
 
-            if (world_rect.position == Vector2i() && current_chunk.position == Vector2i()) {
-                print_line(bilinearly_sample_image_single_channel(heightmap, 3, Vector2(u, v)));
-            }
-
             vertices[idx] = Vector3(x_v * chunk_local_rect.size.x, bilinearly_sample_image_single_channel(heightmap, 3, Vector2(u, v)), y_v * chunk_local_rect.size.y);
         }
     }
@@ -216,6 +212,8 @@ void TerrainChunkNode::initialize(const TerrainChunkNodeInitializationProperties
     DEV_ASSERT(p_init_properties.road_sdf_texture.is_valid());
     DEV_ASSERT(p_init_properties.material.is_valid());
     DEV_ASSERT(p_init_properties.plane_mesh.is_valid());
+    DEV_ASSERT(p_init_properties.heightmap_texture_array.is_valid());
+    DEV_ASSERT(p_init_properties.heightmap_spatial_page_texture.is_valid());
 
     quadtree = QuadTree::create(p_init_properties.superchunk_size, 5);    
     heightmap = p_init_properties.heightmap;
@@ -224,10 +222,16 @@ void TerrainChunkNode::initialize(const TerrainChunkNodeInitializationProperties
     world_rect = Rect2(p_init_properties.chunk_idx * superchunk_size, Vector2(superchunk_size, superchunk_size));
     plane_mesh = p_init_properties.plane_mesh->duplicate();
     road_sdf_texture = p_init_properties.road_sdf_texture;
-    material = p_init_properties.material->duplicate();
+    heightmap_spatial_page_texture = p_init_properties.heightmap_spatial_page_texture;
+    heightmap_texture_array = p_init_properties.heightmap_texture_array;
+    heightmap_texture_handle = p_init_properties.heightmap_texture_handle;
+    material = p_init_properties.material;
     material->set_shader_parameter("superchunk_origin", Vector2(world_rect.position));
     material->set_shader_parameter("superchunk_size", Vector2(world_rect.size));
     material->set_shader_parameter("lod_max_depth", 4);
+    material->set_shader_parameter("heightmap_spatial_map", heightmap_spatial_page_texture);
+    material->set_shader_parameter("heightmap_textures_array", heightmap_texture_array);
+
     plane_mesh->surface_set_material(0, material);
     set_global_position(Vector3(world_rect.position.x, 0.0, world_rect.position.y));
 }
@@ -259,6 +263,10 @@ void TerrainChunkNode::update(Vector2i p_camera_position) {
     }
 
     status = UpdateStatus::GENERATING_QUADTREE;
+}
+
+TextureArrayQueue::TextureHandle TerrainChunkNode::get_heightmap_texture_handle() const {
+    return heightmap_texture_handle;
 }
 
 TerrainChunkNode::TerrainChunkNode()
