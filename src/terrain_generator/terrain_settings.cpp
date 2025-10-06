@@ -22,6 +22,15 @@ void TerrainSettings::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_terrain_material", "terrain_material"), &TerrainSettings::set_terrain_material);
     ClassDB::bind_method(D_METHOD("get_terrain_material"), &TerrainSettings::get_terrain_material);
     ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "terrain_material", PROPERTY_HINT_RESOURCE_TYPE, "ShaderMaterial"), "set_terrain_material", "get_terrain_material");
+
+    ClassDB::bind_method(D_METHOD("set_lod_radius_threshold_multiplier", "lod_radius_threshold_multiplier"), &TerrainSettings::set_lod_radius_threshold_multiplier);
+    ClassDB::bind_method(D_METHOD("get_lod_radius_threshold_multiplier"), &TerrainSettings::get_lod_radius_threshold_multiplier);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "lod_radius_threshold_multiplier"), "set_lod_radius_threshold_multiplier", "get_lod_radius_threshold_multiplier");
+
+    ClassDB::bind_method(D_METHOD("set_mesh_quality", "mesh_quality"), &TerrainSettings::set_mesh_quality);
+    ClassDB::bind_method(D_METHOD("get_mesh_quality"), &TerrainSettings::get_mesh_quality);
+    ADD_PROPERTY(PropertyInfo(Variant::INT, "mesh_quality"), "set_mesh_quality", "get_mesh_quality");
+
 }
 
 TypedArray<TerrainHeightNoiseLayerSettings> TerrainSettings::get_height_noise_layers_bind() const {

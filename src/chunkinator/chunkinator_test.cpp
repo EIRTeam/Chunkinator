@@ -46,9 +46,9 @@ void ChunkinatorTest::_bind_methods() {
 void ChunkinatorTest::_notification(int p_what) {
     switch (p_what) {
         case NOTIFICATION_READY: {
-            plane_mesh = LODMesh::generate_mesh(mesh_quality);
-
+            
             Ref<TerrainSettings> settings = ResourceLoader::get_singleton()->load("res://terrain_settings.tres");
+            plane_mesh = LODMesh::generate_mesh(settings->get_mesh_quality());
 
 
             chunkinator.instantiate();

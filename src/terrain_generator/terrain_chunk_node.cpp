@@ -49,7 +49,7 @@ void TerrainChunkNode::_update_quadtree_task() {
 
 void TerrainChunkNode::_generate_collision_meshes_task(uint32_t p_idx) {
     const Rect2i current_chunk = current_mesh_generation_task.chunks_that_need_collision_mesh[p_idx];
-    const int collision_mesh_resolution = 19;
+    const int collision_mesh_resolution = mesh_resolution+2;
 
     const int vertex_count = collision_mesh_resolution*collision_mesh_resolution;
 
@@ -215,7 +215,7 @@ void TerrainChunkNode::initialize(const TerrainChunkNodeInitializationProperties
     DEV_ASSERT(p_init_properties.heightmap_texture_array.is_valid());
     DEV_ASSERT(p_init_properties.heightmap_spatial_page_texture.is_valid());
 
-    quadtree = QuadTree::create(p_init_properties.superchunk_size, 5);    
+    quadtree = QuadTree::create(p_init_properties.superchunk_size, 5, p_init_properties.lod_threshold_multiplier);    
     heightmap = p_init_properties.heightmap;
     heightmap_texture = p_init_properties.height_texture;
     superchunk_size = p_init_properties.superchunk_size;
@@ -226,11 +226,10 @@ void TerrainChunkNode::initialize(const TerrainChunkNodeInitializationProperties
     heightmap_texture_array = p_init_properties.heightmap_texture_array;
     heightmap_texture_handle = p_init_properties.heightmap_texture_handle;
     material = p_init_properties.material;
-    material->set_shader_parameter("superchunk_origin", Vector2(world_rect.position));
-    material->set_shader_parameter("superchunk_size", Vector2(world_rect.size));
     material->set_shader_parameter("lod_max_depth", 4);
     material->set_shader_parameter("heightmap_spatial_map", heightmap_spatial_page_texture);
     material->set_shader_parameter("heightmap_textures_array", heightmap_texture_array);
+    mesh_resolution = p_init_properties.mesh_resolution;
 
     plane_mesh->surface_set_material(0, material);
     set_global_position(Vector3(world_rect.position.x, 0.0, world_rect.position.y));

@@ -40,7 +40,6 @@ class TerrainManager : public Node3D {
     HashMap<Vector2i, TerrainSuperchunk> superchunks;
     void _on_generation_completed();
 
-    const int mesh_quality = 17;
     Ref<Mesh> plane_mesh;
     Ref<TerrainSettings> settings;
     Vector3 camera_position;

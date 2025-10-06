@@ -14,11 +14,12 @@ void QuadTree::insert_camera(const Vector2i p_camera_pos) {
     constraint_lods(0);
 }
 
-Ref<QuadTree> QuadTree::create(int p_extent, int p_max_depth) {
+Ref<QuadTree> QuadTree::create(int p_extent, int p_max_depth, float p_threshold_multiplier) {
 	Ref<QuadTree> qt;
     qt.instantiate();
     qt->tree_extent = p_extent;
     qt->max_depth = p_max_depth;
+    qt->threshold_multiplier = p_threshold_multiplier;
     qt->clear();
     return qt;
 }
@@ -97,6 +98,7 @@ Vector2i QuadTree::get_position_in_parent(const TreeNode &p_parent, const NodePo
 }
 
 int QuadTree::get_depth_size(int p_depth) const {
+
 	return tree_extent >> p_depth;
 }
 
@@ -123,7 +125,7 @@ void QuadTree::_try_camera_subdiv(const Vector2i p_camera_pos, int p_node_idx) {
     if (!can_subdivide_node(nodes[p_node_idx])) {
         return;
     }
-    const float threshold = (get_depth_size(nodes[p_node_idx].depth) * Math_SQRT2);
+    const float threshold = (get_depth_size(nodes[p_node_idx].depth) * Math_SQRT2 * threshold_multiplier);
     const Vector2i node_center = calculate_node_center(nodes[p_node_idx]);
     if (node_center.distance_to(p_camera_pos) > threshold) {
         return;

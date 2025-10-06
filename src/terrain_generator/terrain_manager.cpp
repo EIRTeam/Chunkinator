@@ -44,7 +44,9 @@ void TerrainManager::_on_generation_completed() {
                 .material = mat,
                 .heightmap_texture_handle = handle,
                 .heightmap_spatial_page_texture = terrain_heightmap_spatial_page.get_texture(),
-                .heightmap_texture_array = terrain_heightmap_data_array.get_texture()
+                .heightmap_texture_array = terrain_heightmap_data_array.get_texture(),
+                .mesh_resolution = settings->get_mesh_quality(),
+                .lod_threshold_multiplier = settings->get_lod_radius_threshold_multiplier()
             });
             
             superchunks.insert(chunk_idx, superchunk);
@@ -114,6 +116,10 @@ void TerrainManager::set_camera_position(Vector3 p_camera_position) {
 
 void TerrainManager::set_terrain_settings(const Ref<TerrainSettings> &p_settings) {
     settings = p_settings;
+    if (settings->get_terrain_material().is_valid()) {
+        settings->get_terrain_material()->set_shader_parameter("superchunk_size", Vector2(p_settings->get_geometry_chunk_size(), p_settings->get_geometry_chunk_size()));
+        settings->get_terrain_material()->set_shader_parameter("vertices_per_side", p_settings->get_mesh_quality()+2);
+    }
 }
 
 Ref<TerrainFinalCombineLayer> TerrainManager::get_terrain_layer() const {
@@ -135,7 +141,11 @@ void TerrainManager::_notification(int p_what) {
         case NOTIFICATION_READY: {
             terrain_heightmap_spatial_page.initialize(settings->get_geometry_chunks_spatial_map_size());
             terrain_heightmap_data_array.initialize(settings->get_geometry_chunk_heightmap_size(), settings->get_geometry_chunk_heightmap_texture_array_layer_count());
-            plane_mesh = LODMesh::generate_mesh(mesh_quality);
+            RenderingServer *rs = RenderingServer::get_singleton();
+            rs->global_shader_parameter_set("terrain_spatial_page", terrain_heightmap_spatial_page.get_texture());
+            rs->global_shader_parameter_set("terrain_height_texture_array", terrain_heightmap_data_array.get_texture());
+
+            plane_mesh = LODMesh::generate_mesh(settings->get_mesh_quality());
         } break;
         case NOTIFICATION_PROCESS:  {
         } break;

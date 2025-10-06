@@ -44,6 +44,8 @@ class TerrainSettings : public Resource {
     int geometry_chunk_heightmap_size = 128;
     int geometry_chunk_heightmap_texture_array_layer_count = 128;
     int geometry_chunks_spatial_map_size = 128;
+    int mesh_quality = 17;
+    float lod_radius_threshold_multiplier = 1.0f;
 
     void set_height_noise_layers_bind(TypedArray<TerrainHeightNoiseLayerSettings> p_noise_layers);
     TypedArray<TerrainHeightNoiseLayerSettings> get_height_noise_layers_bind() const;
@@ -63,5 +65,14 @@ public:
     void get_geometry_chunk_heightmap_texture_array_layer_count(int p_geometry_chunk_heightmap_texture_array_layer_count) { geometry_chunk_heightmap_texture_array_layer_count = p_geometry_chunk_heightmap_texture_array_layer_count; }
 
     int get_geometry_chunks_spatial_map_size() const { return geometry_chunks_spatial_map_size; }
-    void set_geometry_chunks_spatial_map_size(int geometry_chunks_spatial_map_size_) { geometry_chunks_spatial_map_size = geometry_chunks_spatial_map_size_; }
+    void set_geometry_chunks_spatial_map_size(int p_geometry_chunks_spatial_map_size) { geometry_chunks_spatial_map_size = p_geometry_chunks_spatial_map_size; }
+
+    int get_geometry_chunk_size() const { return geometry_chunk_size; }
+    void set_geometry_chunk_size(int p_geometry_chunk_size) { geometry_chunk_size = p_geometry_chunk_size; }
+
+    float get_lod_radius_threshold_multiplier() const { return lod_radius_threshold_multiplier; }
+    void set_lod_radius_threshold_multiplier(float p_lod_radius_threshold_multiplier) { lod_radius_threshold_multiplier = p_lod_radius_threshold_multiplier; }
+
+    int get_mesh_quality() const { return mesh_quality; }
+    void set_mesh_quality(int p_mesh_quality) { mesh_quality = p_mesh_quality; }
 };

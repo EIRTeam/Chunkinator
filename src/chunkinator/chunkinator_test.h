@@ -29,7 +29,6 @@ class ChunkinatorTest : public Node3D {
     HashMap<Vector2i, TerrainChunkNode*> superchunk_meshes;
     void _on_generation_completed();
     HashMap<Vector2i, TerrainChunkNode> superchunks;
-    const int mesh_quality = 17;
     Ref<Mesh> plane_mesh;
     TerrainManager *manager = nullptr;
 public:

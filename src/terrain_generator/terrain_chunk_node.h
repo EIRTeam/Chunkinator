@@ -69,6 +69,7 @@ class TerrainChunkNode : public Node3D {
     TextureArrayQueue::TextureHandle heightmap_texture_handle;
     Ref<Texture2D> heightmap_spatial_page_texture;
     Ref<TextureLayered> heightmap_texture_array;
+    int mesh_resolution;
     
     int superchunk_size = 0;
     void _update_quadtree_task();
@@ -89,6 +90,8 @@ public:
         TextureArrayQueue::TextureHandle heightmap_texture_handle;
         Ref<Texture2D> heightmap_spatial_page_texture;
         Ref<TextureLayered> heightmap_texture_array;
+        int mesh_resolution = 17;
+        float lod_threshold_multiplier = 1.0f;
     };
     void initialize(const TerrainChunkNodeInitializationProperties &p_init_properties);
     void update(Vector2i p_camera_position);

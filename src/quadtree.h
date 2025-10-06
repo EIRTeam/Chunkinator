@@ -2,6 +2,7 @@
 
 #include "godot_cpp/classes/ref_counted.hpp"
 #include "godot_cpp/classes/wrapped.hpp"
+#include "godot_cpp/core/math.hpp"
 #include "godot_cpp/variant/variant.hpp"
 #include "godot_cpp/templates/local_vector.hpp"
 #include "lod_mesh.h"
@@ -55,6 +56,7 @@ class QuadTree : public RefCounted {
     LocalVector<TreeNode> nodes;
     int tree_extent = 512;
     int max_depth = 5;
+    float threshold_multiplier = Math_SQRT2;
 
 private:
     struct NeighborData {
@@ -76,7 +78,7 @@ public:
     static void _bind_methods();
     void clear();
     void insert_camera(const Vector2i p_camera_pos);
-    static Ref<QuadTree> create(int p_extent, int p_max_depth);
+    static Ref<QuadTree> create(int p_extent, int p_max_depth, float p_threshold_multiplier);
     Rect2i get_node_rect_bind(int p_node_dix) const;
     PackedInt32Array get_node_neighbors_bind(int p_node_dix) const;
 
