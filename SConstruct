@@ -42,6 +42,7 @@ sources = Glob("src/*.cpp")
 sources += Glob("src/debugger/*.cpp")
 sources += Glob("src/chunkinator/*.cpp")
 sources += Glob("src/terrain_generator/*.cpp")
+sources.append("/home/eirexe/tracy/public/TracyClient.cpp")
 
 if env["target"] in ["editor", "template_debug"]:
     try:
@@ -65,6 +66,9 @@ if env.get("is_msvc", False):
     env.Append(CXXFLAGS=["/std:c++20"])
 else:
     env.Append(CXXFLAGS=["-std=c++20"])
+
+env.Append(CPPDEFINES=["TRACY_ENABLE"])
+env.Append(CPPPATH=["/home/eirexe/tracy/public"])
 
 copy = env.Install("{}/bin/{}/".format(projectdir, env["platform"]), library)
 

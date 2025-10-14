@@ -7,13 +7,12 @@ uniform sampler2D albedo : source_color, filter_linear_mipmap_anisotropic;
 uniform sampler2D normal : hint_normal;
 uniform sampler2D roughness: hint_roughness_gray;
 
-uniform sampler2D extra_detail_noise;
+uniform sampler2D extra_detail_noise : repeat_enable;
 
-uniform sampler2DArray heightmap_textures_array;
-uniform usampler2D heightmap_spatial_map;
+global uniform sampler2DArray terrain_height_texture_array;
+global uniform usampler2D terrain_spatial_page;
 uniform ivec2 spatial_map_origin;
 uniform vec2 superchunk_size;
-uniform vec2 superchunk_origin;
 uniform int lod_max_depth;
 
 instance uniform int lod_depth;
@@ -25,7 +24,7 @@ varying vec2 road_sdf_uv;
 varying float distance_to_road;
 varying vec2 world_pos;
 varying float height;
-const int VERTICES_PER_SIDE = 19;
+uniform int vertices_per_side = 19;
 const int LOD_REDUCTION_MASK_N = 1;
 const int LOD_REDUCTION_MASK_S = 2;
 const int LOD_REDUCTION_MASK_E = 4;
@@ -35,6 +34,9 @@ uniform int SHADOW_SAMPLE_STEPS = 32;
 uniform float SHADOW_SAMPLE_DIST = 1000.0;
 uniform float softness = 1.0;
 uniform float shadow_pow = 1.0;
+uniform float terrain_uv_scale = 0.01;
+uniform float terrain_noise_scale = 0.01;
+uniform float layers_count = 5.0;
 
 vec4 get_lod_debug_color(int p_lod_depth, int p_lod_max_depth) {
 	return mix(vec4(0.0, 1.0, 0.0, 1.0), vec4(1.0, 0.0, 0.0, 1.0), float(p_lod_depth) / float(lod_max_depth));
@@ -44,13 +46,13 @@ vec3 sample_height(vec2 p_world_pos, vec2 p_uv_min, vec2 p_uv_max, out bool r_wa
 	vec2 superchunk_pos = p_world_pos / superchunk_size;
 	ivec2 superchunk = ivec2(floor(superchunk_pos));
 	ivec2 superchunk_in_spatial_map = superchunk - spatial_map_origin;
-	uint superchunk_layer_idx = texelFetch(heightmap_spatial_map, superchunk_in_spatial_map, 0).r;
+	uint superchunk_layer_idx = uint(texelFetch(terrain_spatial_page, superchunk_in_spatial_map, 0).r);
 	vec2 new_superchunk_origin = floor(superchunk_pos) * superchunk_size;
 	vec2 adjusted_uv = (p_world_pos - new_superchunk_origin) / superchunk_size;
 	vec2 uv = mix(p_uv_min, p_uv_max, adjusted_uv);
 	//return uv;
 	r_was_valid = int(superchunk_layer_idx) != 0;
-	return vec3(uv, texture(heightmap_textures_array, vec3(uv, float(superchunk_layer_idx))).r);
+	return vec3(uv, texture(terrain_height_texture_array, vec3(uv, float(superchunk_layer_idx))).r);
 	//return texture(heightmap_textures_array, vec3(uv, float(superchunk_layer_idx))).r;
 }
 
@@ -88,62 +90,62 @@ float sample_shadows(vec2 p_world_pos, vec2 p_uv_min, vec2 p_uv_max, float p_sta
 }
 
 void vertex() {
-	const bool is_skirt_vertex = VERTEX_ID >= (VERTICES_PER_SIDE*VERTICES_PER_SIDE);
+	bool is_skirt_vertex = VERTEX_ID >= (vertices_per_side*vertices_per_side);
 
 	//COLOR.x = float(texture(heightmap_spatial_map, UV).r);
 	//COLOR.g = float(texture(heightmap_textures_array, vec3(0.0, 0.0, 0.0)).r);
 
 	if (!is_skirt_vertex) {
 		if (bool(lod_mask & LOD_REDUCTION_MASK_N)) {
-			if (VERTEX_ID < VERTICES_PER_SIDE && VERTEX_ID >= 0)
+			if (VERTEX_ID < vertices_per_side && VERTEX_ID >= 0)
 			{
-				int vertex_x = VERTEX_ID % VERTICES_PER_SIDE;
-				int vertex_y = VERTEX_ID / VERTICES_PER_SIDE;
+				int vertex_x = VERTEX_ID % vertices_per_side;
+				int vertex_y = VERTEX_ID / vertices_per_side;
 				if (vertex_y == 0 && vertex_x % 2 != 0)
 				{
 					float vert_coord_curr_x = VERTEX.x;
-					float vert_coord_prev_x = float(vertex_x-1) / float(VERTICES_PER_SIDE-1);
+					float vert_coord_prev_x = float(vertex_x-1) / float(vertices_per_side-1);
 					VERTEX.x = vert_coord_prev_x;
 				}
 			}
 		}
 		if (bool(lod_mask & LOD_REDUCTION_MASK_S)) {
-			int vertex_x = VERTEX_ID % VERTICES_PER_SIDE;
-			int vertex_y = VERTEX_ID / VERTICES_PER_SIDE;
-			if (vertex_y == VERTICES_PER_SIDE-1 && vertex_x % 2 != 0)
+			int vertex_x = VERTEX_ID % vertices_per_side;
+			int vertex_y = VERTEX_ID / vertices_per_side;
+			if (vertex_y == vertices_per_side-1 && vertex_x % 2 != 0)
 			{
 				float vert_coord_curr_x = VERTEX.x;
-				float vert_coord_prev_x = float(vertex_x+1) / float(VERTICES_PER_SIDE-1);
+				float vert_coord_prev_x = float(vertex_x+1) / float(vertices_per_side-1);
 				VERTEX.x = vert_coord_prev_x;
 			}
 		}
 		if (bool(lod_mask & LOD_REDUCTION_MASK_E)) {
-			int vertex_x = VERTEX_ID % VERTICES_PER_SIDE;
-			if (vertex_x == VERTICES_PER_SIDE-1)
+			int vertex_x = VERTEX_ID % vertices_per_side;
+			if (vertex_x == vertices_per_side-1)
 			{
-				int vertex_y = VERTEX_ID / VERTICES_PER_SIDE;
+				int vertex_y = VERTEX_ID / vertices_per_side;
 				if (vertex_y % 2 != 0)
 				{
-					float vert_coord_next_y = float(vertex_y+1) / float(VERTICES_PER_SIDE-1);
+					float vert_coord_next_y = float(vertex_y+1) / float(vertices_per_side-1);
 					VERTEX.z = vert_coord_next_y;
 				}
 			}
 		}
 		if (bool(lod_mask & LOD_REDUCTION_MASK_W)) {
-			int vertex_x = VERTEX_ID % VERTICES_PER_SIDE;
+			int vertex_x = VERTEX_ID % vertices_per_side;
 			if (vertex_x == 0)
 			{
-				int vertex_y = VERTEX_ID / VERTICES_PER_SIDE;
+				int vertex_y = VERTEX_ID / vertices_per_side;
 				if (vertex_y % 2 != 0)
 				{
-					float vert_coord_prev_y = float(vertex_y-1) / float(VERTICES_PER_SIDE-1);
+					float vert_coord_prev_y = float(vertex_y-1) / float(vertices_per_side-1);
 					VERTEX.z = vert_coord_prev_y;
 				}
 			}
 		}
 	}
 
-	vec2 tex_size = 1.0 / vec2(textureSize(heightmap_textures_array, 0).xy);
+	vec2 tex_size = 1.0 / vec2(textureSize(terrain_height_texture_array, 0).xy);
 	vec2 uv_min = tex_size * 0.5;
 	vec2 uv_max = vec2(1.0, 1.0) - tex_size * 0.5;
 
@@ -152,11 +154,11 @@ void vertex() {
 	//vec2 adjusted_uv = (world_pos - superchunk_origin) / superchunk_size;
 	//corrected_uv = mix(uv_min, uv_max, adjusted_uv);
 	bool was_valid = false;
-	COLOR.rgb = sample_height(world_pos, uv_min, uv_max, was_valid);
 	//COLOR.r = height;
 	//VERTEX.y = height;
 	//VERTEX.y = height;
-	VERTEX.y = COLOR.b;
+	height = sample_height(world_pos, uv_min, uv_max, was_valid).b;
+	VERTEX.y = height;
 
 	if (is_skirt_vertex) {
 		VERTEX.y -= 100.0;
@@ -182,7 +184,8 @@ void vertex() {
 
 	const float SAMPLE_NUDGE = 50.0;
 	vec2 sample_nudge_vec = vec2(SAMPLE_NUDGE, 0.0);
-   float hL = sample_height(world_pos - sample_nudge_vec.xy, uv_min, uv_max, was_valid).b;
+
+float hL = sample_height(world_pos - sample_nudge_vec.xy, uv_min, uv_max, was_valid).b;
 	if (!was_valid) {
 		NORMAL.x = 1.0;
 	} else {
@@ -246,22 +249,21 @@ void fragment() {
 	//NORMAL_MAP = blend_normals_rnm(extra_detail_noise_normal, texture(normal, terrain_texture_uv).rgb);
 	//ROUGHNESS = texture(roughness, terrain_texture_uv).r;
 
-	float sampler_noise = texture(extra_detail_noise, world_pos * 0.001).r;
+	float sampler_noise = texture(extra_detail_noise, world_pos * terrain_noise_scale).r;
 
-	const float layers_count = 5.0;
     InterpNodes2 interpNodes = GetNoiseInterpNodes(sampler_noise * layers_count);
     float moment2 = 0.0;
 	ALBEDO = vec3(0.0);
-	//NORMAL_MAP = vec3(0.0);
-	ROUGHNESS = 1.0;
+	NORMAL_MAP = vec3(0.0);
+	ROUGHNESS = 0.0;
     for(int i = 0; i < 2; i++)
     {
         float weight = interpNodes.weights[i];
         moment2 += weight * weight;
-		vec2 sample_uv = GetTextureSampleUV(world_pos * 0.005, 1.0, interpNodes.seeds[i]);
+		vec2 sample_uv = GetTextureSampleUV(world_pos * terrain_uv_scale, 1.0, interpNodes.seeds[i]);
         ALBEDO += texture(albedo, sample_uv).rgb * weight;
-		//NORMAL_MAP += texture(normal, sample_uv).rgb * weight;
-		//ROUGHNESS += texture(roughness, sample_uv).r * weight;
+		NORMAL_MAP += texture(normal, sample_uv).rgb * weight;
+		ROUGHNESS += texture(roughness, sample_uv).r * weight;
     }
 
 	/*if (dist < 150.0) {
@@ -279,14 +281,14 @@ void fragment() {
 void light() {
 	float att = ATTENUATION;
 	if (LIGHT_IS_DIRECTIONAL) {
-		vec2 tex_size = 1.0 / vec2(textureSize(heightmap_textures_array, 0).xy);
+		vec2 tex_size = 1.0 / vec2(textureSize(terrain_height_texture_array, 0).xy);
 		vec2 uv_min = tex_size * 0.5;
 		vec2 uv_max = vec2(1.0, 1.0) - tex_size * 0.5;
 		vec3 light_vector = (INV_VIEW_MATRIX * vec4(LIGHT, 0.0)).xyz;
 		bool valid = false;
 		float new_height = sample_height(world_pos, uv_min, uv_max, valid).b;
 		float shadow = sample_shadows(world_pos, uv_min, uv_max, new_height, light_vector);
-		att = 1.0 - shadow;
+		att = min(1.0 - shadow, att);
 	}
 
     DIFFUSE_LIGHT += clamp(dot(NORMAL, LIGHT), 0.0, 1.0) * att * LIGHT_COLOR / PI;

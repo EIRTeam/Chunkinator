@@ -1,6 +1,91 @@
-[gd_scene load_steps=2 format=3 uid="uid://dh0oj81pufivs"]
+[gd_scene load_steps=12 format=3 uid="uid://dh0oj81pufivs"]
 
 [ext_resource type="Script" uid="uid://k5eknp5ndgfl" path="res://example.gd" id="1_jdh55"]
+[ext_resource type="Script" uid="uid://cte4jalives85" path="res://addons/sk_fly_camera/src/fly_camera.gd" id="2_n51mc"]
+[ext_resource type="PackedScene" uid="uid://7lkdtuhool3p" path="res://models/tree_small_02_1k.gltf" id="3_8lvy3"]
+
+[sub_resource type="Curve" id="Curve_n51mc"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_n51mc"]
+sky_horizon_color = Color(0.662243, 0.671743, 0.686743, 1)
+ground_horizon_color = Color(0.662243, 0.671743, 0.686743, 1)
+
+[sub_resource type="Sky" id="Sky_8lvy3"]
+sky_material = SubResource("ProceduralSkyMaterial_n51mc")
+
+[sub_resource type="Environment" id="Environment_wcwec"]
+background_mode = 2
+sky = SubResource("Sky_8lvy3")
+tonemap_mode = 2
+glow_enabled = true
+fog_enabled = true
+fog_mode = 1
+fog_density = 0.5556
+fog_aerial_perspective = 1.0
+fog_sky_affect = 0.0
+fog_depth_begin = 5000.0
+fog_depth_end = 7000.0
+
+[sub_resource type="BoxMesh" id="BoxMesh_n51mc"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_8lvy3"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_wcwec"]
+size = Vector3(1, 1000, 1)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_8lvy3"]
+size = Vector2(5.935, 11.635)
 
 [node name="Node" type="Node"]
 script = ExtResource("1_jdh55")
+curve_2d = SubResource("Curve_n51mc")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.86602545, 0.4999998, 0, -0.4999998, 0.86602545, 0, 0, 0)
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_wcwec")
+
+[node name="FlyCamera" type="CharacterBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.31537, 0)
+script = ExtResource("2_n51mc")
+fly_speed = 200.0
+metadata/_custom_type_script = "uid://cte4jalives85"
+
+[node name="SpotLight3D" type="SpotLight3D" parent="FlyCamera"]
+transform = Transform3D(-1, 7.642742e-15, 8.742278e-08, 0, -1, 8.742278e-08, 8.742278e-08, 8.742278e-08, 1, 0, 0, 0)
+light_energy = 1.805
+spot_range = 29.57
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, -0.5, 0.5)
+mesh = SubResource("BoxMesh_n51mc")
+
+[node name="tree_small_02_1k" parent="." instance=ExtResource("3_8lvy3")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.48949158, 0, 0.47933912)
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -555.505, -3000)
+mesh = SubResource("BoxMesh_8lvy3")
+
+[node name="MeshInstance3D3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -555.505, -3002)
+mesh = SubResource("BoxMesh_wcwec")
+
+[node name="MeshInstance3D4" type="MeshInstance3D" parent="MeshInstance3D3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.1455688, 0)
+mesh = SubResource("PlaneMesh_8lvy3")
+skeleton = NodePath("../..")
+
+[node name="MeshInstance3D4" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.8198522, 0, 0.5725752, 0, 1, 0, -0.5725752, 0, 0.8198522, 0, 0, 4.5346513)
+mesh = SubResource("BoxMesh_8lvy3")
+
+[node name="MeshInstance3D6" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.1455688, 0)
+mesh = SubResource("PlaneMesh_8lvy3")
+
+[node name="MeshInstance3D5" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.1529967, 1.0696356, 0)
+mesh = SubResource("BoxMesh_wcwec")

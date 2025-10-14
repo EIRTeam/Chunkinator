@@ -1,12 +1,13 @@
 [gd_resource type="ShaderMaterial" load_steps=7 format=3 uid="uid://c5n2785qh2nk6"]
 
 [ext_resource type="Shader" uid="uid://wgfhvnfl1weq" path="res://test_shader.gdshader" id="1_ayy1w"]
-[ext_resource type="Texture2D" uid="uid://bkl4qa48aljgv" path="res://textures/aerial_grass_rock/aerial_grass_rock_diff_4k.jpg" id="2_q2jkt"]
-[ext_resource type="Texture2D" uid="uid://bipcl3id5n27f" path="res://textures/aerial_grass_rock/aerial_grass_rock_nor_gl_4k.jpg" id="3_gw6qf"]
-[ext_resource type="Texture2D" uid="uid://db58bt1pk3euw" path="res://textures/aerial_grass_rock/aerial_grass_rock_rough_4k.jpg" id="5_edkur"]
+[ext_resource type="Texture2D" uid="uid://cduvagfnhjjxv" path="res://textures/Ground068_1K-PNG_Color.png" id="2_1mo5g"]
+[ext_resource type="Texture2D" uid="uid://duxlixuukd08m" path="res://textures/Ground068_1K-PNG_NormalGL.png" id="3_q2jkt"]
+[ext_resource type="Texture2D" uid="uid://l1v0ho8kfywl" path="res://textures/Ground068_1K-PNG_Roughness.png" id="4_gw6qf"]
 
 [sub_resource type="FastNoiseLite" id="FastNoiseLite_1mo5g"]
-frequency = 0.0095
+noise_type = 5
+frequency = 0.1095
 fractal_type = 0
 
 [sub_resource type="NoiseTexture2D" id="NoiseTexture2D_q2jkt"]
@@ -17,15 +18,18 @@ normalize = false
 [resource]
 render_priority = 0
 shader = ExtResource("1_ayy1w")
-shader_parameter/albedo = ExtResource("2_q2jkt")
-shader_parameter/normal = ExtResource("3_gw6qf")
-shader_parameter/roughness = ExtResource("5_edkur")
+shader_parameter/albedo = ExtResource("2_1mo5g")
+shader_parameter/normal = ExtResource("3_q2jkt")
+shader_parameter/roughness = ExtResource("4_gw6qf")
 shader_parameter/extra_detail_noise = SubResource("NoiseTexture2D_q2jkt")
 shader_parameter/spatial_map_origin = Vector2i(0, 0)
 shader_parameter/superchunk_size = Vector2(0, 0)
-shader_parameter/superchunk_origin = Vector2(0, 0)
 shader_parameter/lod_max_depth = 0
+shader_parameter/vertices_per_side = 19
 shader_parameter/SHADOW_SAMPLE_STEPS = 32
-shader_parameter/SHADOW_SAMPLE_DIST = 2000.0
+shader_parameter/SHADOW_SAMPLE_DIST = 3000.0
 shader_parameter/softness = 1.0
-shader_parameter/shadow_pow = 2.0
+shader_parameter/shadow_pow = 1.0
+shader_parameter/terrain_uv_scale = 0.01
+shader_parameter/terrain_noise_scale = 0.01
+shader_parameter/layers_count = 5.0
