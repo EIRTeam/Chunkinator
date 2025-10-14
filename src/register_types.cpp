@@ -5,12 +5,14 @@
 #include <godot_cpp/core/defs.hpp>
 #include <godot_cpp/godot.hpp>
 
+#include "chunkinator/chunk_spawner.h"
 #include "chunkinator/chunkinator_debug_snapshot_viewer.h"
 #include "chunkinator/chunkinator_debugger.h"
 #include "chunkinator/chunkinator_test.h"
 #include "example_class.h"
 #include "quadtree.h"
 #include "segment_quadtree.h"
+#include "terrain_generator/terrain_heightmap_combine_layer.h"
 #include "terrain_generator/terrain_manager.h"
 #include "terrain_generator/terrain_settings.h"
 
@@ -29,6 +31,7 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level)
 	GDREGISTER_ABSTRACT_CLASS(Chunkinator);
 	GDREGISTER_ABSTRACT_CLASS(ChunkinatorDebugLayerViewer);
 	GDREGISTER_ABSTRACT_CLASS(ChunkinatorDebugger);
+	GDREGISTER_ABSTRACT_CLASS(ChunkSpawner);
 	GDREGISTER_ABSTRACT_CLASS(TerrainManager);
 	GDREGISTER_ABSTRACT_CLASS(SegmentQuadTreeDebug);
 }

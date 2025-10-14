@@ -55,7 +55,6 @@ void ChunkinatorTest::_notification(int p_what) {
             manager = memnew(TerrainManager);
             manager->set_terrain_settings(settings);
             add_child(manager);
-            manager->set_chunkinator(chunkinator);
             Ref<TerrainHeightmapLayer> Heightmap_Layer;
             Ref<RandomPointLayer> B_Layer;
             Ref<TerrainRoadConnectionLayer> Road_connection_Layer;
@@ -85,9 +84,10 @@ void ChunkinatorTest::_notification(int p_what) {
             //chunkinator->add_layer_dependency(a_layer_name, "C Layer", Vector2i());
             //chunkinator->add_layer_dependency(b_layer_name, "D Layer", Vector2i());
             //chunkinator->add_layer_dependency("C Layer", "D Layer", Vector2i());
-
+            
             modified_heightmap_layer = Road_connection_Layer;
-
+            
+            manager->set_chunkinator(chunkinator);
             chunkinator->build();
             chunkinator->set_generation_rect(Rect2(-DRAW_DISTANCE, -DRAW_DISTANCE, DRAW_DISTANCE*2, DRAW_DISTANCE*2));
             chunkinator->generate();

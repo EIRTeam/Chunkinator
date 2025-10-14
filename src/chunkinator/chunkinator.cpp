@@ -86,8 +86,6 @@ void Chunkinator::_recalculate_bounds(Ref<ChunkinatorLayer> p_node, Rect2i p_chi
 void Chunkinator::recalculate_bounds() {
     LocalVector<Ref<ChunkinatorLayer>> leaves = get_leaves();
 
-    // TODO: Add generation rect
-    //const Rect2i generation_rect(-10000, -10000, 20000, 20000);
     generation_data.generation_rect = generation_rect;
 
     for (Ref<ChunkinatorLayer> leaf : leaves) {
@@ -214,6 +212,7 @@ void Chunkinator::_generation_task(void *p_userdata, uint32_t p_idx) {
 void Chunkinator::insert_layer(StringName p_layer_name, Ref<ChunkinatorLayer> p_layer) {
     p_layer->name = p_layer_name;
     p_layer->chunkinator = this;
+    p_layer->initialize_internal();
     layers.push_back(p_layer);
 }
 

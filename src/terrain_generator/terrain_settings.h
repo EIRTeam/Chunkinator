@@ -23,12 +23,42 @@ public:
     static void _bind_methods();
 };
 
-class TerrainScattererElement : public Resource {
-    GDCLASS(TerrainScattererElement, Resource);
+class TerrainScattererElementSettings : public Resource {
+    GDCLASS(TerrainScattererElementSettings, Resource);
 
     Ref<PackedScene> scene;
-    int amount_per_scatterer_chunk = 10;
     float probability = 1.0f;
+    float max_angle_radians = Math::deg_to_rad(180.f);
+
+public:
+    float get_probability() const { return probability; }
+    void set_probability(float probability_) { probability = probability_; }
+
+    float get_max_angle_radians() const { return max_angle_radians; }
+    void set_max_angle_radians(float max_angle_radians_) { max_angle_radians = max_angle_radians_; }
+
+    Ref<PackedScene> get_scene() const { return scene; }
+    void set_scene(const Ref<PackedScene> &scene_) { scene = scene_; }
+};
+
+class TerrainScatterLayerSettings : public Resource {
+    int layer_chunk_size = 128;
+    int layer_element_count_per_side = 16;
+    float none_probability = 0.0f;
+    Vector<TerrainScattererElementSettings> elements;
+
+public:
+    float get_none_probability() const { return none_probability; }
+    void set_none_probability(float p_none_probability) { none_probability = p_none_probability; }
+
+    int get_layer_chunk_size() const { return layer_chunk_size; }
+    void set_layer_chunk_size(int p_layer_chunk_size) { layer_chunk_size = p_layer_chunk_size; }
+
+    int get_layer_element_count_per_side() const { return layer_element_count_per_side; }
+    void set_layer_element_count_per_side(int p_layer_element_count_per_side) { layer_element_count_per_side = p_layer_element_count_per_side; }
+
+    Vector<TerrainScattererElementSettings> get_elements() const { return elements; }
+    void set_elements(const Vector<TerrainScattererElementSettings> &elements_) { elements = elements_; }
 };
 
 class TerrainSettings : public Resource {

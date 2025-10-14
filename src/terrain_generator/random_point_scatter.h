@@ -7,7 +7,7 @@ class RandomPointLayer : public ChunkinatorLayer {
 public:
     struct RandomPointGenerationSettings {
         int seed = 0;
-        int points_per_chunk = 9; // Must be a perfect square...
+        Vector2i grid_element_count;
         float jitter_factor = 1.0f;
     };
     

@@ -30,9 +30,9 @@ Vector<Vector2> RandomPointLayer::get_points_in_bounds(Rect2 p_world_bounds) con
 }
 
 void RandomPointChunk::generate() {
-    const int grid_side_count = (int)Math::sqrt((float)generation_settings.points_per_chunk);
-    const float side_size = (get_chunk_bounds().size.x) / (float)grid_side_count;
-    const float half_side_size = side_size / 2.0f;
+    const Vector2i grid_side_count = generation_settings.grid_element_count;
+    const Vector2 side_size = Vector2(get_chunk_bounds().size) / Vector2(grid_side_count);
+    const Vector2 half_side_size = side_size / 2.0f;
     const Vector2i chunk_idx = get_chunk_index();
 
     int64_t seed = HashMapHasherDefault::hash(Vector3i(chunk_idx.x, chunk_idx.y, generation_settings.seed));
@@ -41,11 +41,11 @@ void RandomPointChunk::generate() {
     rng.instantiate();
     rng->set_seed(seed);
 
-    for (int x = 0; x < grid_side_count; x++) {
-        for (int y = 0; y < grid_side_count; y++) {
-            const Vector2 cell_center = get_chunk_bounds().position + Vector2(x * side_size, y * side_size) + Vector2(half_side_size, half_side_size);
-            const float x_jitter = generation_settings.jitter_factor * half_side_size * rng->randf();
-            const float y_jitter = generation_settings.jitter_factor * half_side_size * rng->randf();
+    for (int x = 0; x < grid_side_count.x; x++) {
+        for (int y = 0; y < grid_side_count.x; y++) {
+            const Vector2 cell_center = get_chunk_bounds().position + Vector2(x * side_size.x, y * side_size.y) + Vector2(half_side_size.y, half_side_size.y);
+            const float x_jitter = generation_settings.jitter_factor * half_side_size.x * rng->randf();
+            const float y_jitter = generation_settings.jitter_factor * half_side_size.y * rng->randf();
             points.push_back(cell_center + Vector2(x_jitter, y_jitter));
         }
     }

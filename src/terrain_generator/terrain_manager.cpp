@@ -16,55 +16,44 @@
 #include "terrain_generator/texture_array_queue.h"
 #include <limits>
 
-void TerrainManager::_on_generation_completed() {
-    Ref<TerrainFinalCombineLayer> layer = get_terrain_layer();
-    HashSet<Vector2i> new_chunks;
-    // Add new superchunks
-    for (int i = 0; i < layer->get_chunk_count(); i++) {
-        Ref<TerrainFinalCombineChunk> chunk = layer->get_chunk(i);
-        const Vector2i chunk_idx = chunk->get_chunk_index();
-        new_chunks.insert(chunk->get_chunk_index());
-        if (!superchunks.has(chunk_idx)) {
-            // Add new superchunk to tree
-            TerrainSuperchunk superchunk = {
-                .node = memnew(TerrainChunkNode)
-            };
-            add_child(superchunk.node);
-            Ref<ImageTexture> height_texture = ImageTexture::create_from_image(chunk->get_height_map());
-            TextureArrayQueue::TextureHandle handle = terrain_heightmap_data_array.push_texture(chunk->get_height_map());
-            Ref<ImageTexture> road_sdf_texture = ImageTexture::create_from_image(chunk->get_road_sdf());
-            Ref<ShaderMaterial> mat = settings->get_terrain_material();
-            superchunk.node->initialize({
-                .superchunk_size = chunk->get_chunk_bounds().size.x,
-                .chunk_idx = chunk_idx,
-                .heightmap = chunk->get_height_map(),
-                .height_texture = height_texture,
-                .road_sdf_texture = road_sdf_texture,
-                .plane_mesh = plane_mesh,
-                .material = mat,
-                .heightmap_texture_handle = handle,
-                .heightmap_spatial_page_texture = terrain_heightmap_spatial_page.get_texture(),
-                .heightmap_texture_array = terrain_heightmap_data_array.get_texture(),
-                .mesh_resolution = settings->get_mesh_quality(),
-                .lod_threshold_multiplier = settings->get_lod_radius_threshold_multiplier()
-            });
-            
-            superchunks.insert(chunk_idx, superchunk);
-        }
-    }
-    // Delete existing ones that don't matter anymore
-    HashMap<Vector2i, TerrainSuperchunk>::Iterator it = superchunks.begin();
-    while (it != superchunks.end()) {
-        if (!new_chunks.has(it->key)) {
-            const Vector2i chunk_idx = it->key;
-            ++it;
-            _unload_superchunk(chunk_idx);
-            continue;
-        }
-        ++it;
-    }
-
+void TerrainManager::_on_chunks_spawned() {
     _update_spatial_page();
+}
+
+void TerrainManager::unload_chunk(const Vector2i &p_chunk) {
+    _unload_superchunk(p_chunk);
+}
+
+void TerrainManager::spawn_chunk(const Vector2i &p_chunk) {
+    Ref<TerrainFinalCombineLayer> terrain_layer = get_terrain_layer();
+    Ref<TerrainFinalCombineChunk> chunk = terrain_layer->get_chunk_by_index(p_chunk);
+    if (!superchunks.has(p_chunk)) {
+        // Add new superchunk to tree
+        TerrainSuperchunk superchunk = {
+            .node = memnew(TerrainChunkNode)
+        };
+        add_child(superchunk.node);
+        Ref<ImageTexture> height_texture = ImageTexture::create_from_image(chunk->get_height_map());
+        TextureArrayQueue::TextureHandle handle = terrain_heightmap_data_array.push_texture(chunk->get_height_map());
+        Ref<ImageTexture> road_sdf_texture = ImageTexture::create_from_image(chunk->get_road_sdf());
+        Ref<ShaderMaterial> mat = settings->get_terrain_material();
+        superchunk.node->initialize({
+            .superchunk_size = chunk->get_chunk_bounds().size.x,
+            .chunk_idx = p_chunk,
+            .heightmap = chunk->get_height_map(),
+            .height_texture = height_texture,
+            .road_sdf_texture = road_sdf_texture,
+            .plane_mesh = plane_mesh,
+            .material = mat,
+            .heightmap_texture_handle = handle,
+            .heightmap_spatial_page_texture = terrain_heightmap_spatial_page.get_texture(),
+            .heightmap_texture_array = terrain_heightmap_data_array.get_texture(),
+            .mesh_resolution = settings->get_mesh_quality(),
+            .lod_threshold_multiplier = settings->get_lod_radius_threshold_multiplier()
+        });
+        
+        superchunks.insert(p_chunk, superchunk);
+    }
 }
 
 void TerrainManager::_bind_methods() {
@@ -97,11 +86,6 @@ void TerrainManager::_update_spatial_page() {
     terrain_heightmap_spatial_page.upload_page();
 }
 
-void TerrainManager::set_chunkinator(Ref<Chunkinator> p_chunkinator) {
-    chunkinator = p_chunkinator;
-    chunkinator->connect("generation_completed", callable_mp(this, &TerrainManager::_on_generation_completed));
-}
-
 void TerrainManager::_unload_superchunk(const Vector2i &p_idx) {
     auto it = superchunks.find(p_idx);
     DEV_ASSERT(it != superchunks.end());
@@ -123,11 +107,15 @@ void TerrainManager::set_terrain_settings(const Ref<TerrainSettings> &p_settings
 }
 
 Ref<TerrainFinalCombineLayer> TerrainManager::get_terrain_layer() const {
-    return chunkinator->get_layer("Heightmap Combine Layer");
+    return get_chunkinator()->get_layer("Heightmap Combine Layer");
 }
 
 Ref<TerrainRoadConnectionLayer> TerrainManager::get_road_layer() const {
-    return chunkinator->get_layer("Road Connections");
+    return get_chunkinator()->get_layer("Road Connections");
+}
+
+StringName TerrainManager::get_layer_name() const {
+    return "Heightmap Combine Layer";
 }
 
 void TerrainManager::update() {
