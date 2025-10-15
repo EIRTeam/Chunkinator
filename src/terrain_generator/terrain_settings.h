@@ -5,6 +5,7 @@
 #include "godot_cpp/classes/packed_scene.hpp"
 #include "godot_cpp/classes/resource.hpp"
 #include "godot_cpp/classes/shader_material.hpp"
+#include "godot_cpp/templates/local_vector.hpp"
 
 using namespace godot;
 
@@ -32,20 +33,24 @@ class TerrainScattererElementSettings : public Resource {
 
 public:
     float get_probability() const { return probability; }
-    void set_probability(float probability_) { probability = probability_; }
+    void set_probability(float p_probability) { probability = p_probability; }
 
     float get_max_angle_radians() const { return max_angle_radians; }
-    void set_max_angle_radians(float max_angle_radians_) { max_angle_radians = max_angle_radians_; }
+    void set_max_angle_radians(float p_max_angle_radians) { max_angle_radians = p_max_angle_radians; }
 
     Ref<PackedScene> get_scene() const { return scene; }
-    void set_scene(const Ref<PackedScene> &scene_) { scene = scene_; }
+    void set_scene(const Ref<PackedScene> &p_scene) { scene = p_scene; }
+
+    static void _bind_methods();
 };
 
 class TerrainScatterLayerSettings : public Resource {
+    GDCLASS(TerrainScatterLayerSettings, Resource);
+    StringName debug_name;
     int layer_chunk_size = 128;
     int layer_element_count_per_side = 16;
     float none_probability = 0.0f;
-    Vector<TerrainScattererElementSettings> elements;
+    Vector<Ref<TerrainScattererElementSettings>> elements;
 
 public:
     float get_none_probability() const { return none_probability; }
@@ -57,8 +62,16 @@ public:
     int get_layer_element_count_per_side() const { return layer_element_count_per_side; }
     void set_layer_element_count_per_side(int p_layer_element_count_per_side) { layer_element_count_per_side = p_layer_element_count_per_side; }
 
-    Vector<TerrainScattererElementSettings> get_elements() const { return elements; }
-    void set_elements(const Vector<TerrainScattererElementSettings> &elements_) { elements = elements_; }
+    Vector<Ref<TerrainScattererElementSettings>> get_elements() const { return elements; }
+    void set_elements(const Vector<Ref<TerrainScattererElementSettings>> &p_elements) { elements = p_elements; }
+    
+    TypedArray<TerrainScattererElementSettings> get_elements_bind() const;
+    void set_elements_bind(const TypedArray<TerrainScattererElementSettings> &p_elements);
+
+    static void _bind_methods();
+
+    StringName get_debug_name() const { return debug_name; }
+    void set_debug_name(const StringName &debug_name_) { debug_name = debug_name_; }
 };
 
 class TerrainSettings : public Resource {
@@ -77,9 +90,13 @@ class TerrainSettings : public Resource {
     int mesh_quality = 17;
     float lod_radius_threshold_multiplier = 1.0f;
 
+    Vector<Ref<TerrainScatterLayerSettings>> scatter_layers;
+
     void set_height_noise_layers_bind(TypedArray<TerrainHeightNoiseLayerSettings> p_noise_layers);
     TypedArray<TerrainHeightNoiseLayerSettings> get_height_noise_layers_bind() const;
-
+    
+    void set_scatter_layers_bind(TypedArray<TerrainScatterLayerSettings> p_scatter_layers);
+    TypedArray<TerrainScatterLayerSettings> get_scatter_layers_bind() const;
 public:
     void set_terrain_material(Ref<ShaderMaterial> p_material);
     Ref<ShaderMaterial> get_terrain_material() const;
@@ -105,4 +122,7 @@ public:
 
     int get_mesh_quality() const { return mesh_quality; }
     void set_mesh_quality(int p_mesh_quality) { mesh_quality = p_mesh_quality; }
+
+    int get_scatter_layer_count() const;
+    Ref<TerrainScatterLayerSettings> get_scatter_layer(int p_idx) const;
 };

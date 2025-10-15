@@ -4,7 +4,7 @@
 #include "godot_cpp/templates/hashfuncs.hpp"
 
 int RandomPointLayer::get_chunk_size() const {
-    return 16384;
+    return generation_settings.chunk_size;
 }
 
 Ref<ChunkinatorChunk> RandomPointLayer::instantiate_chunk() {
@@ -23,10 +23,16 @@ Vector<Vector2> RandomPointLayer::get_points_in_bounds(Rect2 p_world_bounds) con
         }
 
         for (Vector2 point : chunk->points) {
-            points.push_back(point);
+            if (p_world_bounds.has_point(point)) {
+                points.push_back(point);
+            }
         }
     }
     return points;
+}
+
+void RandomPointLayer::set_settings(const RandomPointGenerationSettings &p_settings) {
+    generation_settings = p_settings;
 }
 
 void RandomPointChunk::generate() {

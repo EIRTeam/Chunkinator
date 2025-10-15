@@ -1,6 +1,7 @@
-[gd_resource type="TerrainSettings" load_steps=5 format=3 uid="uid://ehbhese0dl7r"]
+[gd_resource type="TerrainSettings" load_steps=8 format=3 uid="uid://ehbhese0dl7r"]
 
 [ext_resource type="Material" uid="uid://c5n2785qh2nk6" path="res://test_shader.tres" id="1_iqq4n"]
+[ext_resource type="PackedScene" uid="uid://cuqx2qtqf030q" path="res://models/tree.tscn" id="1_rgo5q"]
 
 [sub_resource type="Curve" id="Curve_75j7r"]
 _limits = [-1.0, 1.0, -1.0, 1.0]
@@ -8,12 +9,24 @@ _data = [Vector2(-1, 1), 0.0, 0.0, 0, 0, Vector2(-0.789976, -0.63074195), 0.0, 0
 point_count = 5
 
 [sub_resource type="FastNoiseLite" id="FastNoiseLite_iqq4n"]
+frequency = 0.03
 fractal_type = 2
 
 [sub_resource type="TerrainHeightNoiseLayerSettings" id="TerrainHeightNoiseLayerSettings_rgo5q"]
 curve = SubResource("Curve_75j7r")
 noise = SubResource("FastNoiseLite_iqq4n")
 
+[sub_resource type="TerrainScattererElementSettings" id="TerrainScattererElementSettings_iqq4n"]
+scene = ExtResource("1_rgo5q")
+
+[sub_resource type="TerrainScatterLayerSettings" id="TerrainScatterLayerSettings_rgo5q"]
+none_probability = 0.75
+layer_chunk_size = 2048
+layer_element_count_per_side = 64
+debug_name = &"Trees"
+elements = Array[TerrainScattererElementSettings]([SubResource("TerrainScattererElementSettings_iqq4n")])
+
 [resource]
 height_noise_layers = Array[TerrainHeightNoiseLayerSettings]([SubResource("TerrainHeightNoiseLayerSettings_rgo5q")])
 terrain_material = ExtResource("1_iqq4n")
+scatter_layers = Array[TerrainScatterLayerSettings]([SubResource("TerrainScatterLayerSettings_rgo5q")])

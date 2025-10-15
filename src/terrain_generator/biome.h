@@ -3,13 +3,12 @@
 #include "chunkinator/chunkinator_chunk.h"
 #include "chunkinator/chunkinator_layer.h"
 
-class RandomPointLayer : public ChunkinatorLayer {
+class BiomeLayer : public ChunkinatorLayer {
 public:
     struct RandomPointGenerationSettings {
         int seed = 0;
-        Vector2i grid_element_count;
+        int points_per_chunk = 9; // Must be a perfect square...
         float jitter_factor = 1.0f;
-        int chunk_size = 16384;
     };
     
 private:
@@ -18,7 +17,6 @@ public:
     virtual int get_chunk_size() const override;
     virtual Ref<ChunkinatorChunk> instantiate_chunk() override;
     Vector<Vector2> get_points_in_bounds(Rect2 p_world_bounds) const;
-    void set_settings(const RandomPointGenerationSettings &p_settings);
 };
 
 class RandomPointChunk : public ChunkinatorChunk {

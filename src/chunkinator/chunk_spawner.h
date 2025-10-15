@@ -21,5 +21,6 @@ public:
     static void _bind_methods();
     void set_chunkinator(Ref<Chunkinator> p_chunkinator);
     Ref<Chunkinator> get_chunkinator() const;
+    Ref<ChunkinatorLayer> get_layer() const;
     void _on_generation_completed();
 };

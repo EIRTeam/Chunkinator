@@ -10,11 +10,14 @@
 #include "godot_cpp/classes/resource_loader.hpp"
 #include "segment_quadtree.h"
 #include "terrain_generator/random_point_scatter.h"
+#include "terrain_generator/scatter.h"
+#include "terrain_generator/scatter_manager.h"
 #include "terrain_generator/terrain_chunk_node.h"
 #include "terrain_generator/terrain_heightmap.h"
 #include "terrain_generator/terrain_heightmap_combine_layer.h"
 #include "terrain_generator/terrain_roads.h"
 #include "lod_mesh.h"
+#include "terrain_generator/terrain_settings.h"
 
 void ChunkinatorTest::_on_generation_completed() {
     /*for (int i = 0; i < modified_heightmap_layer->get_chunk_count(); i++) {
@@ -86,7 +89,36 @@ void ChunkinatorTest::_notification(int p_what) {
             //chunkinator->add_layer_dependency("C Layer", "D Layer", Vector2i());
             
             modified_heightmap_layer = Road_connection_Layer;
-            
+
+            for (int i = 0; i < settings->get_scatter_layer_count(); i++) {
+                Ref<TerrainScatterLayerSettings> scatter_layer_settings = settings->get_scatter_layer(i);
+
+                Ref<RandomPointLayer> point_layer;
+                point_layer.instantiate();
+                point_layer->set_settings({
+                    .grid_element_count = Vector2i(scatter_layer_settings->get_layer_element_count_per_side(), scatter_layer_settings->get_layer_element_count_per_side()),
+                    .chunk_size = scatter_layer_settings->get_layer_chunk_size()
+                });
+
+                const StringName point_layer_name = String(scatter_layer_settings->get_debug_name()) + " Points";
+
+                chunkinator->insert_layer(point_layer_name, point_layer);
+
+                Ref<ScatterLayer> worldgen_layer;
+                worldgen_layer.instantiate();
+                
+                worldgen_layer->initialize(scatter_layer_settings, point_layer);
+                
+                chunkinator->insert_layer(scatter_layer_settings->get_debug_name(), worldgen_layer);
+
+                chunkinator->add_layer_dependency(point_layer_name, scatter_layer_settings->get_debug_name(), Vector2i());
+                chunkinator->add_layer_dependency(heightmap_layer_name, point_layer_name, Vector2i());
+            }
+
+            ScatterManager *scatter_manager = memnew(ScatterManager);
+            scatter_manager->set_chunkinator(chunkinator);
+            add_child(scatter_manager);
+
             manager->set_chunkinator(chunkinator);
             chunkinator->build();
             chunkinator->set_generation_rect(Rect2(-DRAW_DISTANCE, -DRAW_DISTANCE, DRAW_DISTANCE*2, DRAW_DISTANCE*2));
@@ -101,7 +133,6 @@ void ChunkinatorTest::_notification(int p_what) {
             w->add_child(debugger);
             debugger->set_chunkinator(chunkinator);
             debugger->set_anchors_and_offsets_preset(Control::PRESET_FULL_RECT);
-
 
             chunkinator->connect("generation_completed", callable_mp(this, &ChunkinatorTest::_on_generation_completed));
 

@@ -19,6 +19,10 @@ Ref<Chunkinator> ChunkSpawner::get_chunkinator() const {
     return chunkinator;
 }
 
+Ref<ChunkinatorLayer> ChunkSpawner::get_layer() const {
+    return layer;
+}
+
 void ChunkSpawner::_on_generation_completed() {
     HashSet<Vector2i> new_chunks;
     // Add new superchunks

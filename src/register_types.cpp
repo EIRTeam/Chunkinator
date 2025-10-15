@@ -23,6 +23,8 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level)
 	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
 		return;
 	}
+	GDREGISTER_CLASS(TerrainScattererElementSettings);
+	GDREGISTER_CLASS(TerrainScatterLayerSettings);
 	GDREGISTER_CLASS(ExampleClass);
 	GDREGISTER_CLASS(QuadTree);
 	GDREGISTER_CLASS(ChunkinatorTest);

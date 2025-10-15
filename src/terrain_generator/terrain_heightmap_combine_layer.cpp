@@ -29,7 +29,7 @@ float TerrainFinalCombineLayer::sample_height(const Vector2 &p_world_position) c
     
     const bool has_closest_segment = get_road_connection_layer()->get_distance_to_closest_road_segment(p_world_position, segment, &dist_to_road, &closest_point);
 
-    const float multiplier = 1000.0f;
+    const float multiplier = 250.0f;
 
     if (has_closest_segment && dist_to_road < 250.0f) {
         height = heightmap_layer->sample_height(closest_point) * multiplier;
@@ -120,7 +120,7 @@ void TerrainFinalCombineChunk::generate() {
     float *sampled_heights_ptrw = (float*)sampled_heights.ptrw();
     for (int y = 0; y < heightmap_size; y++) {
         for (int x = 0; x < heightmap_size; x++) {
-            sampled_heights_ptrw[x + y * heightmap_size] *= 1000.0f;
+            sampled_heights_ptrw[x + y * heightmap_size] *= 250.0f;
         }
     }
 
