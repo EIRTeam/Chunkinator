@@ -1,6 +1,7 @@
 #include "quadtree.h"
 #include "godot_cpp/classes/file_access.hpp"
 #include "godot_cpp/classes/json.hpp"
+#include "godot_cpp/core/error_macros.hpp"
 
 void QuadTree::clear() {
     nodes.clear();
@@ -33,6 +34,8 @@ int QuadTree::get_greater_or_equal_neighbor(const int p_node_idx, const NodeDire
         return -1;
     }
 
+    ERR_FAIL_INDEX_V(p_node_idx, nodes.size(), -1);
+
     const NodePosition *positions = POSITIONS_IN_DIRECTION[p_direction];
     const NodePosition *opposite_positions = POSITIONS_IN_DIRECTION[OPPOSITE_DIRECTIONS[p_direction]];
 
@@ -55,6 +58,7 @@ int QuadTree::get_greater_or_equal_neighbor(const int p_node_idx, const NodeDire
 }
 
 void QuadTree::get_neighbors(const int p_node_idx, LocalVector<NeighborData> &r_out) const {
+    ERR_FAIL_INDEX(p_node_idx, nodes.size());
     for (int i = 0; i < NodeDirection::DIRECTION_MAX; i++) {
         const int greater_neighbor = get_greater_or_equal_neighbor(p_node_idx, (NodeDirection)i);
         if (greater_neighbor == -1) {
@@ -139,7 +143,7 @@ void QuadTree::_try_camera_subdiv(const Vector2i p_camera_pos, int p_node_idx) {
     }
 }
 
-void QuadTree::constraint_lods(int p_node_idx) {
+void QuadTree::constraint_lods(const int p_node_idx) {
     if (nodes[p_node_idx].is_leaf()) {
         LocalVector<NeighborData> neighbors;
         get_neighbors(p_node_idx, neighbors);
@@ -161,11 +165,12 @@ void QuadTree::constraint_lods(int p_node_idx) {
         }
     }
 
-    for (int child : nodes[p_node_idx].children) {
-        if (child == -1) {
+    const int *children = nodes[p_node_idx].children;
+    for (int i = 0; i < std::size(nodes[p_node_idx].children); i++) {
+        if (children[i] == -1) {
             continue;
         }
-        constraint_lods(child);
+        constraint_lods(children[i]);
     }
 }
 

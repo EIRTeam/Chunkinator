@@ -15,6 +15,7 @@ class TerrainFinalCombineLayer : public ChunkinatorLayer {
     Ref<TerrainRoadConnectionLayer> road_connection_layer;
     Ref<TerrainHeightmapLayer> heightmap_layer;
     int heightmap_size = 64;
+    float height_multiplier = 0.0f;
 public:
     
     virtual int get_chunk_size() const override;
@@ -34,7 +35,6 @@ class TerrainFinalCombineChunk : public ChunkinatorChunk {
     Ref<ImageTexture> debug_draw_texture;
     Ref<ImageTexture> debug_road_sdf_texture;
     TerrainFinalCombineLayer *layer = nullptr;
-    int heightmap_size = 128;
     const int road_sdf_size = 128;
 public:
     virtual void generate();

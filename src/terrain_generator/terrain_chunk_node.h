@@ -60,7 +60,6 @@ class TerrainChunkNode : public Node3D {
     HashMap<Rect2i, TerrainChunkInformation> chunks;
 
     Ref<ShaderMaterial> material;
-    Ref<QuadTree> quadtree;
     Ref<Image> heightmap;
     Ref<ImageTexture> heightmap_texture;
     Ref<ImageTexture> road_sdf_texture;
@@ -70,8 +69,10 @@ class TerrainChunkNode : public Node3D {
     Ref<Texture2D> heightmap_spatial_page_texture;
     Ref<TextureLayered> heightmap_texture_array;
     int mesh_resolution;
+    int collision_mesh_resolution;
     
     int superchunk_size = 0;
+    float lod_threshold_multiplier = 0.0f;
     void _update_quadtree_task();
     void _generate_collision_meshes_task(uint32_t p_idx);
     void _check_quadtree_generation();
@@ -91,6 +92,7 @@ public:
         Ref<Texture2D> heightmap_spatial_page_texture;
         Ref<TextureLayered> heightmap_texture_array;
         int mesh_resolution = 17;
+        int collision_mesh_resolution = 17;
         float lod_threshold_multiplier = 1.0f;
     };
     void initialize(const TerrainChunkNodeInitializationProperties &p_init_properties);

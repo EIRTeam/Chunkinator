@@ -1,5 +1,7 @@
 #include "scatter.h"
 #include "godot_cpp/classes/random_number_generator.hpp"
+#include "godot_cpp/core/error_macros.hpp"
+#include "godot_cpp/templates/hash_map.hpp"
 #include "godot_cpp/variant/packed_float32_array.hpp"
 #include "godot_cpp/variant/transform3d.hpp"
 #include "terrain_generator/random_point_scatter.h"
@@ -42,6 +44,12 @@ void ScatterChunk::generate() {
 
     Ref<TerrainHeightmapLayer> heightmap_layer = layer->get_layer("Heightmap Layer");
 
+    elements.reserve(points.size());
+
+    LocalVector<LocalVector<int>> per_element_transforms;
+
+    per_element_transforms.resize(element_settings.size());
+
     for (int i = 0; i < points.size(); i++) {
         if (rng->randf() < none_probability) {
             continue;
@@ -50,19 +58,47 @@ void ScatterChunk::generate() {
         const int element_idx = rng->rand_weighted(element_probabilities);
         
         Transform3D element_trf;
-        const float height = heightmap_layer->sample_noise(points[i]) * 250.0f;
+        const float height = heightmap_layer->sample_noise(points[i]);
         element_trf.origin = Vector3(points[i].x, height, points[i].y);
 
+        per_element_transforms[element_idx].push_back(elements.size());
 
         elements.push_back({
             .transform = element_trf,
             .scene = element_settings[element_idx]->get_scene()
         });
     }
+
+    per_element_multimesh.clear();
+    per_element_multimesh.resize(element_settings.size());
+
+    for (int i = 0; i < element_settings.size(); i++) {
+        if (per_element_transforms[i].is_empty()) {
+            continue;
+        }
+
+        per_element_multimesh[i].instantiate();
+        per_element_multimesh[i]->set_mesh(element_settings[i]->get_mesh(0));
+        per_element_multimesh[i]->set_transform_format(MultiMesh::TRANSFORM_3D);
+        per_element_multimesh[i]->set_instance_count(per_element_transforms[i].size());
+
+        for (int j = 0; j < per_element_transforms[i].size(); j++) {
+            per_element_multimesh[i]->set_instance_transform(j, elements[per_element_transforms[i][j]].transform);
+        }
+    }
 }
 
 const LocalVector<ScatterChunk::ScatterElement> &ScatterChunk::get_elements() const {
     return elements;
+}
+
+const Ref<MultiMesh> ScatterChunk::get_element_multimesh(int p_idx) const {
+    ERR_FAIL_INDEX_V(p_idx, per_element_multimesh.size(), nullptr);
+    return per_element_multimesh[p_idx];
+}
+
+int ScatterChunk::get_element_multimesh_count() const {
+    return per_element_multimesh.size();
 }
 
 void ScatterChunk::debug_draw(ChunkinatorDebugDrawer *p_debug_drawer) const {

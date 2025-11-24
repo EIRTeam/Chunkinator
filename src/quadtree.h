@@ -71,7 +71,7 @@ private:
     void subdivide_node(int p_idx);
     Vector2i calculate_node_center(const TreeNode &p_node) const;
     void _try_camera_subdiv(const Vector2i p_camera_pos, int p_node_idx);
-    void constraint_lods(int p_node_idx);
+    void constraint_lods(const int p_node_idx);
     LocalVector<int> get_local_neighbors(const int p_node_idx, const NodeDirection p_direction) const;
     TypedArray<Dictionary> get_leafs_bind() const;
 public:

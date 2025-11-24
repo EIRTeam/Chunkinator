@@ -56,7 +56,7 @@ public:
         float *out_ptrw = (float*)out.ptrw();
         for (int i = 0; i < p_world_positions.size(); i++) {
             Ref<TerrainHeightmapChunk> chunk = get_chunk_in_position(p_world_positions[i]);
-            out_ptrw[i] = chunk->sample_height(p_world_positions[i]) * 250.0f;
+            out_ptrw[i] = chunk->sample_height(p_world_positions[i]);
         }
         return out;
     }

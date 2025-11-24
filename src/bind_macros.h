@@ -11,3 +11,4 @@
 #define MAKE_BIND_FLOAT(m_class, m_name) MAKE_BIND_T(m_class, m_name, Variant::FLOAT, PROPERTY_HINT_NONE, "");
 #define MAKE_BIND_INT(m_class, m_name) MAKE_BIND_T(m_class, m_name, Variant::INT, PROPERTY_HINT_NONE, "");
 #define MAKE_BIND_RESOURCE(m_class, m_name, m_resource_type) MAKE_BIND_T(m_class, m_name, Variant::OBJECT, PROPERTY_HINT_RESOURCE_TYPE, _STR(m_resource_type));
+#define MAKE_BIND_FLOAT32_ARRAY(m_class, m_name) MAKE_BIND_T(m_class, m_name, Variant::PACKED_FLOAT32_ARRAY, PROPERTY_HINT_NONE, "");

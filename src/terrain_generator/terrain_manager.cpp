@@ -49,6 +49,7 @@ void TerrainManager::spawn_chunk(const Vector2i &p_chunk) {
             .heightmap_spatial_page_texture = terrain_heightmap_spatial_page.get_texture(),
             .heightmap_texture_array = terrain_heightmap_data_array.get_texture(),
             .mesh_resolution = settings->get_mesh_quality(),
+            .collision_mesh_resolution = settings->get_collision_mesh_quality(),
             .lod_threshold_multiplier = settings->get_lod_radius_threshold_multiplier()
         });
         
@@ -82,7 +83,9 @@ void TerrainManager::_update_spatial_page() {
         terrain_heightmap_spatial_page.set_index(sc.key - page_origin, handle.texture_idx);
     }
 
-    settings->get_terrain_material()->set_shader_parameter("spatial_map_origin", page_origin);
+    RenderingServer *rs = RenderingServer::get_singleton();
+
+    rs->global_shader_parameter_set("spatial_map_origin", page_origin);
     terrain_heightmap_spatial_page.upload_page();
 }
 
@@ -132,6 +135,7 @@ void TerrainManager::_notification(int p_what) {
             RenderingServer *rs = RenderingServer::get_singleton();
             rs->global_shader_parameter_set("terrain_spatial_page", terrain_heightmap_spatial_page.get_texture());
             rs->global_shader_parameter_set("terrain_height_texture_array", terrain_heightmap_data_array.get_texture());
+            rs->global_shader_parameter_set("superchunk_size", Vector2(settings->get_geometry_chunk_size(), settings->get_geometry_chunk_size()));
 
             plane_mesh = LODMesh::generate_mesh(settings->get_mesh_quality());
         } break;

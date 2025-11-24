@@ -1,5 +1,6 @@
 #include "chunkinator_test.h"
 #include "chunkinator/chunkinator_debugger.h"
+#include "chunkinator/chunkinator_generator.h"
 #include "godot_cpp/classes/camera3d.hpp"
 #include "godot_cpp/classes/global_constants.hpp"
 #include "godot_cpp/classes/input_event_key.hpp"
@@ -62,6 +63,8 @@ void ChunkinatorTest::_notification(int p_what) {
             Ref<RandomPointLayer> B_Layer;
             Ref<TerrainRoadConnectionLayer> Road_connection_Layer;
             Ref<TerrainFinalCombineLayer> heightmap_combine_layer;
+            Ref<ChunkinatorGeneratorLayer> terrain_generator_layer;
+            Ref<ChunkinatorGeneratorLayer> scatter_generator_layer;
             
             Heightmap_Layer.instantiate();
             B_Layer.instantiate();
@@ -72,18 +75,26 @@ void ChunkinatorTest::_notification(int p_what) {
             const StringName heightmap_combine_layer_name = "Heightmap Combine Layer";
             const StringName b_layer_name = "Road Random Points";
             const StringName road_connection_layer_name = "Road Connections";
+            const StringName terrain_generator_layer_name = "Generator Terrain";
+            const StringName scatter_generator_layer_name = "Generator Scatter";
+
+            terrain_generator_layer = ChunkinatorGeneratorLayer::create(4096, DRAW_DISTANCE);
+            scatter_generator_layer = ChunkinatorGeneratorLayer::create(256, settings->get_scatter_generation_radius());
 
             chunkinator->insert_layer(heightmap_layer_name, Heightmap_Layer);
             heightmap_combine_layer->set_heightmap_size(settings->get_geometry_chunk_heightmap_size());
             chunkinator->insert_layer(b_layer_name, B_Layer);
             chunkinator->insert_layer(road_connection_layer_name, Road_connection_Layer);
             chunkinator->insert_layer(heightmap_combine_layer_name, heightmap_combine_layer);
+            chunkinator->insert_layer(terrain_generator_layer_name, terrain_generator_layer);
+            chunkinator->insert_layer(scatter_generator_layer_name, scatter_generator_layer);
             //chunkinator->insert_layer("C Layer", C_Layer);
             //chunkinator->insert_layer("D Layer", D_Layer);
 
             chunkinator->add_layer_dependency(heightmap_layer_name, road_connection_layer_name, Vector2i(50, 50));
             chunkinator->add_layer_dependency(b_layer_name, road_connection_layer_name, Vector2i(3000, 3000));
             chunkinator->add_layer_dependency(road_connection_layer_name, heightmap_combine_layer_name, Vector2i(1, 1));
+            chunkinator->add_layer_dependency(heightmap_combine_layer_name, terrain_generator_layer_name, Vector2i());
             //chunkinator->add_layer_dependency(a_layer_name, "C Layer", Vector2i());
             //chunkinator->add_layer_dependency(b_layer_name, "D Layer", Vector2i());
             //chunkinator->add_layer_dependency("C Layer", "D Layer", Vector2i());
@@ -113,6 +124,7 @@ void ChunkinatorTest::_notification(int p_what) {
 
                 chunkinator->add_layer_dependency(point_layer_name, scatter_layer_settings->get_debug_name(), Vector2i());
                 chunkinator->add_layer_dependency(heightmap_layer_name, point_layer_name, Vector2i());
+                chunkinator->add_layer_dependency(scatter_layer_settings->get_debug_name(), scatter_generator_layer_name, Vector2i());
             }
 
             ScatterManager *scatter_manager = memnew(ScatterManager);

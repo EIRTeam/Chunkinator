@@ -24,6 +24,10 @@ void TerrainSettings::_bind_methods() {
 
     MAKE_BIND_FLOAT(TerrainSettings, lod_radius_threshold_multiplier);
     MAKE_BIND_INT(TerrainSettings, mesh_quality);
+    MAKE_BIND_INT(TerrainSettings, collision_mesh_quality);
+    MAKE_BIND_INT(TerrainSettings, terrain_generation_radius);
+    MAKE_BIND_INT(TerrainSettings, scatter_generation_radius);
+
 
     ClassDB::bind_method(D_METHOD("set_scatter_layers", "scatter_layers_bind"), &TerrainSettings::set_scatter_layers_bind);
     ClassDB::bind_method(D_METHOD("get_scatter_layers"), &TerrainSettings::get_scatter_layers_bind);
@@ -95,8 +99,43 @@ void TerrainHeightNoiseLayerSettings::_bind_methods() {
 }
 
 void TerrainScattererElementSettings::_bind_methods() {
-    MAKE_BIND_RESOURCE(TerrainScattererElementSettings, scene, PackedScene);
     MAKE_BIND_FLOAT(TerrainScattererElementSettings, probability);
+    MAKE_BIND_FLOAT(TerrainScattererElementSettings, impostor_begin_distance);
+    MAKE_BIND_FLOAT(TerrainScattererElementSettings, impostor_margin_distance);
+    MAKE_BIND_RESOURCE(TerrainScattererElementSettings, scene, PackedScene);
+    MAKE_BIND_FLOAT32_ARRAY(TerrainScattererElementSettings, lod_distances);
+
+    ClassDB::bind_method(D_METHOD("set_meshes", "meshes"), &TerrainScattererElementSettings::set_meshes_bind);
+    ClassDB::bind_method(D_METHOD("get_meshes"), &TerrainScattererElementSettings::get_meshes_bind);
+    ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "meshes", PROPERTY_HINT_ARRAY_TYPE, "TerrainScattererLODMesh"), "set_meshes", "get_meshes");
+}
+
+TypedArray<TerrainScattererLODMesh> TerrainScattererElementSettings::get_meshes_bind() const {
+    TypedArray<TerrainScattererLODMesh> out;
+    out.resize(meshes.size());
+
+    for (int i = 0; i < meshes.size(); i++) {
+        out[i] = meshes[i];
+    }
+
+    return out;
+}
+
+int TerrainScattererElementSettings::get_mesh_count() { return meshes.size(); }
+
+Ref<TerrainScattererLODMesh> TerrainScattererElementSettings::get_mesh(int p_idx) const {
+    ERR_FAIL_INDEX_V(p_idx, meshes.size(), nullptr);
+    return meshes[p_idx];
+}
+
+void TerrainScattererElementSettings::set_meshes_bind(TypedArray<TerrainScattererLODMesh> p_meshes) {
+    meshes.resize(p_meshes.size());
+
+    Ref<TerrainScattererLODMesh> *elements_w = meshes.ptr();
+
+    for (int i = 0; i < p_meshes.size(); i++) {
+        elements_w[i] = p_meshes[i];
+    }
 }
 
 TypedArray<TerrainScattererElementSettings> TerrainScatterLayerSettings::get_elements_bind() const {
@@ -129,4 +168,9 @@ void TerrainScatterLayerSettings::_bind_methods() {
     ClassDB::bind_method(D_METHOD("set_elements", "elements"), &TerrainScatterLayerSettings::set_elements_bind);
     ClassDB::bind_method(D_METHOD("get_elements"), &TerrainScatterLayerSettings::get_elements_bind);
     ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "elements", PROPERTY_HINT_ARRAY_TYPE, "TerrainScattererElementSettings"), "set_elements", "get_elements");
+}
+
+void TerrainScattererLODMesh::_bind_methods() {
+    MAKE_BIND_RESOURCE(TerrainScattererLODMesh, mesh, Mesh);
+    MAKE_BIND_FLOAT(TerrainScattererLODMesh, begin_distance);
 }

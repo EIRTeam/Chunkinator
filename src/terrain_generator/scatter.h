@@ -2,6 +2,7 @@
 
 #include "chunkinator/chunkinator_chunk.h"
 #include "chunkinator/chunkinator_layer.h"
+#include "godot_cpp/classes/multi_mesh.hpp"
 #include "godot_cpp/core/error_macros.hpp"
 #include "godot_cpp/variant/packed_float32_array.hpp"
 #include "terrain_generator/random_point_scatter.h"
@@ -45,10 +46,15 @@ public:
     };
 private:
     LocalVector<ScatterElement> elements;
+    PackedFloat32Array element_transforms;
     ScatterLayer *layer = nullptr;
+
+    LocalVector<Ref<MultiMesh>> per_element_multimesh;
 public:
     virtual void generate() override;
     const LocalVector<ScatterElement> &get_elements() const;
+    const Ref<MultiMesh> get_element_multimesh(int p_idx) const;
+    int get_element_multimesh_count() const;
     virtual void debug_draw(ChunkinatorDebugDrawer *p_debug_drawer) const override;
     friend class ScatterLayer;
 };

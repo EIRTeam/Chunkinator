@@ -10,11 +10,13 @@
 #include "chunkinator/chunkinator_debugger.h"
 #include "chunkinator/chunkinator_test.h"
 #include "example_class.h"
+#include "indirect_mesh.h"
 #include "quadtree.h"
 #include "segment_quadtree.h"
 #include "terrain_generator/terrain_heightmap_combine_layer.h"
 #include "terrain_generator/terrain_manager.h"
 #include "terrain_generator/terrain_settings.h"
+#include "indirect_mesh_instance_3d.h"
 
 using namespace godot;
 
@@ -23,6 +25,9 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level)
 	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
 		return;
 	}
+	GDREGISTER_CLASS(IndirectMesh);
+	GDREGISTER_CLASS(IndirectMeshInstance3D);
+	GDREGISTER_CLASS(TerrainScattererLODMesh);
 	GDREGISTER_CLASS(TerrainScattererElementSettings);
 	GDREGISTER_CLASS(TerrainScatterLayerSettings);
 	GDREGISTER_CLASS(ExampleClass);

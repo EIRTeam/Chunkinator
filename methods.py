@@ -1,12 +1,44 @@
 import os
 import sys
 from enum import Enum
+from typing import Generator, List, Optional, Union, cast
+from io import StringIO, TextIOBase
+import contextlib
 
 # Colors are disabled in non-TTY environments such as pipes. This means
 # that if output is redirected to a file, it won't contain color codes.
 # Colors are always enabled on continuous integration.
 _colorize = bool(sys.stdout.isatty() or os.environ.get("CI"))
 
+@contextlib.contextmanager
+def generated_wrapper(
+    path: str,
+    guard: Optional[bool] = None,
+) -> Generator[TextIOBase, None, None]:
+    """
+    Wrapper class to automatically handle copyright headers and header guards
+    for generated scripts. Meant to be invoked via `with` statement similar to
+    creating a file.
+
+    - `path`: The path of the file to be created.
+    - `guard`: Optional bool to determine if `#pragma once` should be added. If
+    unassigned, the value is determined by file extension.
+    """
+
+    with open(path, "wt", encoding="utf-8", newline="\n") as file:
+        if not path.endswith(".out"):  # For test output, we only care about the content.
+            file.write("\n/* THIS FILE IS GENERATED. EDITS WILL BE LOST. */\n\n")
+
+            if guard is None:
+                guard = path.endswith((".h", ".hh", ".hpp", ".hxx", ".inc"))
+            if guard:
+                file.write("#pragma once\n\n")
+
+        with StringIO(newline="\n") as str_io:
+            yield str_io
+            file.write(str_io.getvalue().strip() or "/* NO CONTENT */")
+
+        file.write("\n")
 
 class ANSI(Enum):
     """
@@ -50,3 +82,8 @@ def print_warning(*values: object) -> None:
 def print_error(*values: object) -> None:
     """Prints an error message with formatting."""
     print(f"{ANSI.RED}{ANSI.BOLD}ERROR:{ANSI.REGULAR}", *values, ANSI.RESET, file=sys.stderr)
+
+def Run(env, function, comstr="$GENCOMSTR"):
+    from SCons.Script import Action
+
+    return Action(function, comstr)

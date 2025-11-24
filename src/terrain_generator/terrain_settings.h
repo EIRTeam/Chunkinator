@@ -2,12 +2,33 @@
 
 #include "godot_cpp/classes/curve.hpp"
 #include "godot_cpp/classes/fast_noise_lite.hpp"
+#include "godot_cpp/classes/mesh.hpp"
 #include "godot_cpp/classes/packed_scene.hpp"
 #include "godot_cpp/classes/resource.hpp"
 #include "godot_cpp/classes/shader_material.hpp"
+#include "godot_cpp/core/error_macros.hpp"
 #include "godot_cpp/templates/local_vector.hpp"
+#include "godot_cpp/variant/packed_float32_array.hpp"
 
 using namespace godot;
+
+class TerrainScattererLODMesh : public Resource {
+    GDCLASS(TerrainScattererLODMesh, Resource);
+
+    Ref<Mesh> mesh;
+    float begin_distance = 0.0f;
+
+public:
+
+    static void _bind_methods();
+    Ref<Mesh> get_mesh() const { return mesh; }
+    void set_mesh(const Ref<Mesh> &mesh_) { mesh = mesh_; }
+
+    float get_begin_distance() const { return begin_distance; }
+    void set_begin_distance(float begin_distance_) { begin_distance = begin_distance_; }
+
+    
+};
 
 class TerrainHeightNoiseLayerSettings : public Resource {
     GDCLASS(TerrainHeightNoiseLayerSettings, Resource);
@@ -28,6 +49,11 @@ class TerrainScattererElementSettings : public Resource {
     GDCLASS(TerrainScattererElementSettings, Resource);
 
     Ref<PackedScene> scene;
+    LocalVector<Ref<TerrainScattererLODMesh>> meshes;
+    PackedFloat32Array lod_distances;
+
+    float impostor_begin_distance = 30.0f;
+    float impostor_margin_distance = 5.0f;
     float probability = 1.0f;
     float max_angle_radians = Math::deg_to_rad(180.f);
 
@@ -38,10 +64,25 @@ public:
     float get_max_angle_radians() const { return max_angle_radians; }
     void set_max_angle_radians(float p_max_angle_radians) { max_angle_radians = p_max_angle_radians; }
 
-    Ref<PackedScene> get_scene() const { return scene; }
-    void set_scene(const Ref<PackedScene> &p_scene) { scene = p_scene; }
-
     static void _bind_methods();
+
+    float get_impostor_begin_distance() const { return impostor_begin_distance; }
+    void set_impostor_begin_distance(float impostor_begin_distance_) { impostor_begin_distance = impostor_begin_distance_; }
+
+    float get_impostor_margin_distance() const { return impostor_margin_distance; }
+    void set_impostor_margin_distance(float impostor_margin_distance_) { impostor_margin_distance = impostor_margin_distance_; }
+
+    Ref<PackedScene> get_scene() const { return scene; }
+    void set_scene(const Ref<PackedScene> &scene_) { scene = scene_; }
+
+    PackedFloat32Array get_lod_distances() const { return lod_distances; }
+    void set_lod_distances(const PackedFloat32Array &lod_distances_) { lod_distances = lod_distances_; }
+
+    TypedArray<TerrainScattererLODMesh> get_meshes_bind() const;
+    void set_meshes_bind(TypedArray<TerrainScattererLODMesh> p_meshes);
+
+    int get_mesh_count();
+    Ref<TerrainScattererLODMesh> get_mesh(int p_idx) const;
 };
 
 class TerrainScatterLayerSettings : public Resource {
@@ -84,11 +125,15 @@ class TerrainSettings : public Resource {
     int terrain_base_heightmap_size = 128;
 
     int geometry_chunk_size = 2048;
-    int geometry_chunk_heightmap_size = 128;
-    int geometry_chunk_heightmap_texture_array_layer_count = 128;
+    int geometry_chunk_heightmap_size = 512;
+    int geometry_chunk_heightmap_texture_array_layer_count = 256;
     int geometry_chunks_spatial_map_size = 128;
-    int mesh_quality = 17;
+    int mesh_quality = 41;
+    int collision_mesh_quality = 11;
     float lod_radius_threshold_multiplier = 1.0f;
+    float height_multiplier = 512.0f;
+    int terrain_generation_radius = 7500;
+    int scatter_generation_radius = 2500;
 
     Vector<Ref<TerrainScatterLayerSettings>> scatter_layers;
 
@@ -125,4 +170,16 @@ public:
 
     int get_scatter_layer_count() const;
     Ref<TerrainScatterLayerSettings> get_scatter_layer(int p_idx) const;
+
+    float get_height_multiplier() const { return height_multiplier; }
+    void set_height_multiplier(float height_multiplier_) { height_multiplier = height_multiplier_; }
+
+    int get_collision_mesh_quality() const { return collision_mesh_quality; }
+    void set_collision_mesh_quality(int collision_mesh_quality_) { collision_mesh_quality = collision_mesh_quality_; }
+
+    int get_terrain_generation_radius() const { return terrain_generation_radius; }
+    void set_terrain_generation_radius(int terrain_generation_radius_) { terrain_generation_radius = terrain_generation_radius_; }
+
+    int get_scatter_generation_radius() const { return scatter_generation_radius; }
+    void set_scatter_generation_radius(int scatter_generation_radius_) { scatter_generation_radius = scatter_generation_radius_; }
 };

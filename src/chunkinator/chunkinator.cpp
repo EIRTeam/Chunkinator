@@ -1,6 +1,7 @@
 #include "chunkinator.h"
 #include "chunkinator/chunkinator_bounds.h"
 #include "chunkinator/chunkinator_debug_drawer.h"
+#include "chunkinator/chunkinator_generator.h"
 #include "chunkinator/chunkinator_layer.h"
 #include "godot_cpp/classes/time.hpp"
 #include "godot_cpp/classes/worker_thread_pool.hpp"
@@ -86,10 +87,11 @@ void Chunkinator::_recalculate_bounds(Ref<ChunkinatorLayer> p_node, Rect2i p_chi
 void Chunkinator::recalculate_bounds() {
     LocalVector<Ref<ChunkinatorLayer>> leaves = get_leaves();
 
-    generation_data.generation_rect = generation_rect;
-
     for (Ref<ChunkinatorLayer> leaf : leaves) {
-        _recalculate_bounds(leaf, generation_rect, Vector2i());
+        Ref<ChunkinatorGeneratorLayer> generator = leaf;
+        ERR_FAIL_COND_MSG(!generator.is_valid(), "Leaf nodes must always be generators!");
+        Rect2i leaf_rect = generator->get_generation_rect();
+        _recalculate_bounds(leaf, leaf_rect, Vector2i());
     }
 }
 

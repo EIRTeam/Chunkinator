@@ -29,17 +29,15 @@ float TerrainFinalCombineLayer::sample_height(const Vector2 &p_world_position) c
     
     const bool has_closest_segment = get_road_connection_layer()->get_distance_to_closest_road_segment(p_world_position, segment, &dist_to_road, &closest_point);
 
-    const float multiplier = 250.0f;
-
     if (has_closest_segment && dist_to_road < 250.0f) {
-        height = heightmap_layer->sample_height(closest_point) * multiplier;
+        height = heightmap_layer->sample_height(closest_point);
         //if (dist_to_road > 150.0f) {
         //    float our_height = heightmap_layer->sample_height(p_world_position) * multiplier;
         //    float blend_factor = Math::inverse_lerp(150.0f, 250.0f, dist_to_road);
         //    height = Math::lerp(height, our_height, blend_factor * blend_factor);
         //}
     } else {
-        height = heightmap_layer->sample_height(p_world_position) * multiplier;
+        height = heightmap_layer->sample_height(p_world_position);
     }                        
     
     return height;
@@ -101,6 +99,7 @@ void TerrainFinalCombineChunk::generate() {
     }
 
     height_map.instantiate();
+    const int heightmap_size = layer->get_heightmap_size();
     height_map = Image::create_empty(heightmap_size, heightmap_size, false, Image::FORMAT_RF);
     Ref<TerrainHeightmapLayer> heightmap_layer = layer->get_heightmap_layer();
 
@@ -118,11 +117,11 @@ void TerrainFinalCombineChunk::generate() {
 
     PackedByteArray sampled_heights = layer->sample_height_batched_bytes_f32(sample_points);
     float *sampled_heights_ptrw = (float*)sampled_heights.ptrw();
-    for (int y = 0; y < heightmap_size; y++) {
+    /*for (int y = 0; y < heightmap_size; y++) {
         for (int x = 0; x < heightmap_size; x++) {
             sampled_heights_ptrw[x + y * heightmap_size] *= 250.0f;
         }
-    }
+    }*/
 
     height_map = Image::create_from_data(heightmap_size, heightmap_size, false, Image::FORMAT_RF, sampled_heights);
 }
