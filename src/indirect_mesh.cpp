@@ -45,11 +45,8 @@ Ref<Mesh> IndirectMesh::build_combined_mesh() const {
                 mesh->surface_set_material(mesh->get_surface_count()-1, lod_mesh->surface_get_material(surface_idx));
             }
             AABB aabb = lod_mesh->get_aabb();
-            print_line("MEGA!", aabb.get_center().length(), aabb.get_longest_axis_size());
             radius = MAX(radius, aabb.get_center().length() + aabb.get_longest_axis_size());
         }
-
-        
 
         const_cast<IndirectMesh*>(this)->mesh_radius = radius;
         const_cast<IndirectMesh*>(this)->combined_mesh = mesh;

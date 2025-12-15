@@ -5,9 +5,9 @@ import sys
 from methods import print_error
 import methods
 import glsl_builders
+from SCons.Variables import BoolVariable, EnumVariable, PathVariable
 
 libname = "chunkinator"
-projectdir = "demo"
 
 localEnv = Environment(tools=["default"], PLATFORM="")
 
@@ -23,7 +23,18 @@ customs = ["custom.py"]
 customs = [os.path.abspath(path) for path in customs]
 
 opts = Variables(customs, ARGUMENTS)
+
+opts.Add(
+    PathVariable(
+        key="project_dir",
+        help="Path to a project dir to copy the final binaries to",
+        default=localEnv.get("project_dir", None),
+    )
+)
+
 opts.Update(localEnv)
+
+projectdir = ARGUMENTS.get("project_dir", None)
 
 Help(opts.GenerateHelpText(localEnv))
 
@@ -51,6 +62,9 @@ sources = Glob("src/*.cpp")
 sources += Glob("src/debugger/*.cpp")
 sources += Glob("src/chunkinator/*.cpp")
 sources += Glob("src/terrain_generator/*.cpp")
+sources += Glob("src/console/*.cpp")
+sources += Glob("src/console/gui/*.cpp")
+sources += Glob("src/game/*.cpp")
 sources.append("/mnt/wwn-0x50026b7782b0ee9e-part1/porter/tracy/public/TracyClient.cpp")
 
 env.Append(BUILDERS=GLSL_BUILDERS)
@@ -108,7 +122,10 @@ else:
 env.Append(CPPDEFINES=["TRACY_ENABLE"])
 env.Append(CPPPATH=["/mnt/wwn-0x50026b7782b0ee9e-part1/porter/tracy/public"])
 
-copy = env.Install("{}/bin/{}/".format(projectdir, env["platform"]), library)
+if projectdir != None:
+    copy = env.Install("{}/bin/{}/".format(projectdir, env["platform"]), library)
+    default_args = [library, copy]
+else:
+    default_args = [library]
 
-default_args = [library, copy]
 Default(*default_args)

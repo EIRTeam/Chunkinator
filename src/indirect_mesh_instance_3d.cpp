@@ -31,6 +31,7 @@ void IndirectMeshInstance3D::_render(bool p_lod_pass) {
     Camera3D *camera = get_viewport()->get_camera_3d();
     Transform3D camera_trf = camera->get_camera_transform();
 
+    const Projection camera_proj_original = camera->get_camera_projection();
     Projection camera_proj = camera->get_camera_projection();
     Projection correction;
     correction.set_depth_correction(true);
@@ -48,8 +49,8 @@ void IndirectMeshInstance3D::_render(bool p_lod_pass) {
     cull_data->shadow_pass = p_lod_pass;
     
     TransformStorage::store_transform(camera_trf.affine_inverse().scaled(Vector3(1.0, 1.0, -1.0)), cull_data->view);
-    cull_data->znear = camera_proj.get_z_near();
-    cull_data->zfar = camera_proj.get_z_far();
+    cull_data->znear = camera_proj_original.get_z_near();
+    cull_data->zfar = camera_proj_original.get_z_far();
     cull_data->P00 = camera_proj.columns[0][0];
     cull_data->P11 = camera_proj.columns[1][1];
     cull_data->camera_position[0] = camera->get_global_position().x;
@@ -196,7 +197,7 @@ void IndirectMeshInstance3D::_notification(int p_what) {
             RenderingServer *rs = RenderingServer::get_singleton();
             compositor = rs->compositor_create();
             compositor_effect = rs->compositor_effect_create();
-            RID compositor_effect_2 = rs->compositor_effect_create();
+            compositor_effect_2 = rs->compositor_effect_create();
             TypedArray<RID> effects;
             effects.push_back(compositor_effect);
             effects.push_back(compositor_effect_2);
@@ -215,7 +216,45 @@ IndirectMeshInstance3D::IndirectMeshInstance3D() {
 }
 
 IndirectMeshInstance3D::~IndirectMeshInstance3D() {
-    RenderingServer::get_singleton()->free_rid(multimesh);
+    if (multimesh.is_valid()) {
+        RenderingServer::get_singleton()->free_rid(multimesh);
+    }
+    RenderingServer *rs = RenderingServer::get_singleton();
+    RenderingDevice *rd = rs->get_rendering_device();
+    if (multimesh_config_buffer.is_valid()) {
+        rd->free_rid(multimesh_config_buffer);
+    }
+
+    if (gpu_cull_data_buffer.is_valid()) {
+        rd->free_rid(gpu_cull_data_buffer);
+    }
+
+    if (lod_config_buffer.is_valid()) {
+        rd->free_rid(lod_config_buffer);
+    }
+
+    if (gpu_instace_data_buffer.is_valid()) {
+        rd->free_rid(gpu_instace_data_buffer);
+    }
+
+    if (multimesh.is_valid()) {
+        rs->free_rid(multimesh);
+    }
+
+    if (cull_shader.pipeline.is_valid()) {
+        rd->free_rid(cull_shader.pipeline);
+    }
+
+    if (compositor_effect_2.is_valid()) {
+        rs->free_rid(compositor_effect_2);
+    }
+    if (compositor_effect.is_valid()) {
+        rs->free_rid(compositor_effect);
+    }
+    
+    if (compositor.is_valid()) {
+        rs->free_rid(compositor);
+    }
 }
 
 void IndirectMeshInstance3D::initialize_bind(Ref<IndirectMesh> p_mesh, int p_instance_count, TypedArray<Transform3D> p_transforms) {

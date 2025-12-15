@@ -24,6 +24,7 @@ class IndirectMeshInstance3D : public VisualInstance3D {
 
     RID compositor;
     RID compositor_effect;
+    RID compositor_effect_2;
 
     MultimeshLodShaderRD lod_shader;
 
