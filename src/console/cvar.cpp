@@ -111,6 +111,17 @@ void CVar::connect_command_callback(Callable p_callable) {
     ConsoleSystem::get_singleton()->get_proxy(cvar_data->cvar_name)->connect("command_executed", p_callable);
 }
 
+float CVar::get_float() const {
+    DEV_ASSERT(!is_command());
+    DEV_ASSERT(cvar_data->type == GDEXTENSION_VARIANT_TYPE_FLOAT);
+    return cvar_data->current_value;
+}
+
+bool CVar::get_bool() const {
+    DEV_ASSERT(!is_command());
+    DEV_ASSERT(cvar_data->type == GDEXTENSION_VARIANT_TYPE_BOOL);
+    return cvar_data->current_value;
+}
 
 void CVarProxy::_bind_methods() {
     ADD_SIGNAL(MethodInfo("command_executed"));

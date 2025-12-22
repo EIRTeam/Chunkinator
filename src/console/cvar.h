@@ -80,5 +80,8 @@ public:
     void execute_command();
     void connect_command_callback(Callable p_callable);
 
+    float get_float() const;
+    bool get_bool() const;
+
     friend class ConsoleSystem;
 };

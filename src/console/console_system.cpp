@@ -1,12 +1,16 @@
 #include "console_system.h"
 #include "console/cvar.h"
 #include "gdextension_interface.h"
+#include "godot_cpp/classes/file_access.hpp"
 #include "godot_cpp/core/error_macros.hpp"
 #include "godot_cpp/core/print_string.hpp"
 #include "godot_cpp/variant/utility_functions.hpp"
-#include <cstdio>
 
 ConsoleSystem *ConsoleSystem::singleton = nullptr;
+CVar ConsoleSystem::save_changed_vars = CVar::create_variable("save_changed_vars", GDEXTENSION_VARIANT_TYPE_BOOL, true, "Should changed variables be saved?", PROPERTY_HINT_NONE, "");
+CVar ConsoleSystem::print_changed_command = CVar::create_command("print_changed", "Prints CVars that are different from their defaults");
+const char *CVAR_CONFIG_FILE_PATH = "user://cvars.cfg";
+const char *CVAR_SECTION_NAME = "cvars";
 
 void ConsoleSystem::register_cvar(CVar* p_cvar) {
     auto it = registered_cvars.find(p_cvar->cvar_data->cvar_name);
@@ -36,12 +40,37 @@ void ConsoleSystem::initialize() {
     for (int i = 0; i < delayed_init_arr.size(); i++) {
         delayed_init_arr[i].cvar->_delayed_init(delayed_init_arr[i]);
     }
+
+    print_changed_command.connect_command_callback(callable_mp(this, &ConsoleSystem::print_changed_cvars));
+
+    cvar_config_file.instantiate();
+    if (FileAccess::file_exists(CVAR_CONFIG_FILE_PATH)) {
+        cvar_config_file->load("user://cvars.cfg");
+
+        if (cvar_config_file->has_section(CVAR_SECTION_NAME)) {
+            for (const String &key : cvar_config_file->get_section_keys(CVAR_SECTION_NAME)) {
+                set_cvar(key, cvar_config_file->get_value(CVAR_SECTION_NAME, key));
+            }  
+        }
+    }
 }
 
 CVar *ConsoleSystem::get_cvar(StringName p_cvar_name) {
     auto it = registered_cvars.find(p_cvar_name);
     ERR_FAIL_COND_V_MSG(it == registered_cvars.end(), nullptr, vformat("CVar %s did not exist!", p_cvar_name));
     return it->value;
+}
+
+bool ConsoleSystem::set_cvar(const StringName &p_cvar, const Variant &p_value, bool p_silent, bool p_show_error) {
+    auto it = registered_cvars.find(p_cvar);
+    ERR_FAIL_COND_V_MSG(it == registered_cvars.end(), false, vformat("CVar %s did not exist!", p_cvar));
+    ERR_FAIL_COND_V_MSG(it->value->is_command(), false, vformat("Tried to set CVar %s with a value, but it's a command!"));
+    const int64_t input_type = UtilityFunctions::type_of(p_value);
+    ERR_FAIL_COND_V_MSG(input_type != it->value->cvar_data->type, false, vformat("Tried to set CVar %s with Variant of type %d but expected %d!", p_cvar, input_type, it->value->cvar_data->type));
+
+    it->value->cvar_data->current_value = p_value;
+
+    return true;
 }
 
 Vector<ConsoleSystem::CVarAutocompleteResult> ConsoleSystem::do_autocomplete(const String &p_text) const {
@@ -99,6 +128,7 @@ void ConsoleSystem::execute_user_command(const String &p_command_line) {
             Variant final_value = cvar->cvar_data->current_value;
 
             switch(cvar->cvar_data->type) {
+                // Special case so we can support 1 as true and 0 as false, like in source.
                 case GDEXTENSION_VARIANT_TYPE_BOOL: {
                     if (value.is_valid_int()) {
                         final_value = value.to_int() > 0 ? true : false;
@@ -109,12 +139,10 @@ void ConsoleSystem::execute_user_command(const String &p_command_line) {
                 }
             }
             
-            if (UtilityFunctions::type_of(final_value) != cvar->cvar_data->type) {
-                print_error("Invalid value!");
+            if (!set_cvar(cvar->get_cvar_name(), final_value)) {
                 return;
             }
-
-            cvar->cvar_data->current_value = final_value;
+            _update_cvar_autosave(cvar);
         }
         print_line_rich(vformat("[color=red]%s = \"%s\"[/color] (def. \"%s\")", cvar->get_cvar_name_string(), cvar->get_value_display_string(), cvar->get_default_value_display_string()));
 
@@ -124,6 +152,38 @@ void ConsoleSystem::execute_user_command(const String &p_command_line) {
     } else {
         cvar->execute_command();
     }
+}
+
+void ConsoleSystem::print_changed_cvars() {
+    print_line("Changed variables:");
+    for (auto kv : registered_cvars) {
+        const CVar *cvar = kv.value;
+        if (cvar->is_command()) {
+            continue;
+        }
+        const bool is_different = cvar->cvar_data->current_value != cvar->cvar_data->default_value;
+        if (!is_different) {
+            continue;
+        }
+        print_line_rich(vformat("[b]%s[/b] = [color=red]\"%s\"[/color] (def. \"%s\")", cvar->get_cvar_name_string(), cvar->get_value_display_string(), cvar->get_default_value_display_string()));
+    }
+}
+
+void ConsoleSystem::_update_cvar_autosave(CVar *p_cvar) {
+    if (!save_changed_vars.get_bool()) {
+        return;
+    }
+
+    const StringName cvar_name = p_cvar->get_cvar_name();
+    if (cvar_config_file->has_section_key(CVAR_SECTION_NAME, cvar_name)) {
+        cvar_config_file->erase_section_key(CVAR_SECTION_NAME, cvar_name);
+    }
+
+    if (p_cvar->cvar_data->current_value == p_cvar->cvar_data->default_value) {
+        return;
+    }
+    cvar_config_file->set_value(CVAR_SECTION_NAME, cvar_name, p_cvar->cvar_data->current_value);
+    cvar_config_file->save(CVAR_CONFIG_FILE_PATH);
 }
 
 ConsoleSystem::ConsoleSystem() {

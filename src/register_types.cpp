@@ -35,12 +35,17 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level)
 	GDREGISTER_CLASS(ChunkinatorTest);
 	GDREGISTER_CLASS(TerrainSettings);
 	GDREGISTER_CLASS(TerrainHeightNoiseLayerSettings);
+	GDREGISTER_ABSTRACT_CLASS(CVarProxy);
+	GDREGISTER_ABSTRACT_CLASS(ConsoleGUI);
+	GDREGISTER_CLASS(LaniakeaMainLoop);
 	GDREGISTER_ABSTRACT_CLASS(Chunkinator);
 	GDREGISTER_ABSTRACT_CLASS(ChunkinatorDebugLayerViewer);
 	GDREGISTER_ABSTRACT_CLASS(ChunkinatorDebugger);
 	GDREGISTER_ABSTRACT_CLASS(ChunkSpawner);
 	GDREGISTER_ABSTRACT_CLASS(TerrainManager);
 	GDREGISTER_ABSTRACT_CLASS(SegmentQuadTreeDebug);
+	GDREGISTER_ABSTRACT_CLASS(ConsoleLogger);
+	GDREGISTER_ABSTRACT_CLASS(ConsoleSystem);
 }
 
 void uninitialize_gdextension_types(ModuleInitializationLevel p_level) {
