@@ -180,8 +180,10 @@ void ConsoleSystem::_update_cvar_autosave(CVar *p_cvar) {
     }
 
     if (p_cvar->cvar_data->current_value == p_cvar->cvar_data->default_value) {
+        cvar_config_file->save(CVAR_CONFIG_FILE_PATH);
         return;
     }
+    
     cvar_config_file->set_value(CVAR_SECTION_NAME, cvar_name, p_cvar->cvar_data->current_value);
     cvar_config_file->save(CVAR_CONFIG_FILE_PATH);
 }
