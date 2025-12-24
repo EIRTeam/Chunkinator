@@ -61,5 +61,5 @@ public:
     Vector3 get_desired_velocity() const;
     void initialize(Ref<MovementSettings> p_movement_settings, Node3D *p_owner);
     void update(float p_delta);
-    void _handle_collision(const Vector3 &p_desired_velocity, const Ref<PhysicsTestMotionResult3D> &p_collision_result)
+    void _handle_collision(const Vector3 &p_velocity, const Ref<PhysicsTestMotionResult3D> &p_collision_result)
 };

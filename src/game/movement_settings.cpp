@@ -17,6 +17,7 @@ void MovementSettings::_bind_methods() {
     MAKE_BIND_FLOAT(MovementSettings, snap_to_ground_height);
     MAKE_BIND_FLOAT(MovementSettings, terminal_velocity);
     MAKE_BIND_FLOAT(MovementSettings, gravity);
+    MAKE_BIND_FLOAT(MovementSettings, push_mass);
 }
 
 float MovementSettings::get_stance_height(int p_stance) const {

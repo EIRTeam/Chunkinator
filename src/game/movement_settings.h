@@ -20,6 +20,7 @@ class MovementSettings : public Resource {
     float snap_to_ground_height = 0.6f;
     float terminal_velocity = 54.0f;
     float gravity = 10.0f;
+    float push_mass = 15.0f;
 public:
     static void _bind_methods();
 
@@ -36,6 +37,7 @@ public:
     MAKE_SETTER_GETTER_FLOAT_VALUE(snap_to_ground_height, snap_to_ground_height);
     MAKE_SETTER_GETTER_FLOAT_VALUE(terminal_velocity, terminal_velocity);
     MAKE_SETTER_GETTER_FLOAT_VALUE(gravity, gravity);
+    MAKE_SETTER_GETTER_FLOAT_VALUE(push_mass, push_mass);
 
     float get_stance_height(int p_stance) const;
 };

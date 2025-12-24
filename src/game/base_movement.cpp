@@ -1,4 +1,5 @@
 #include "base_movement.h"
+#include "debug/debug_overlay.h"
 #include "game/movement_shared.h"
 #include "godot_cpp/classes/cylinder_shape3d.hpp"
 #include "godot_cpp/classes/physics_server3d.hpp"
@@ -49,8 +50,27 @@ void BaseMovement::update(float p_delta) {
 
 }
 
-void BaseMovement::_handle_collision(const Vector3 &p_desired_velocity, const Ref<PhysicsTestMotionResult3D> &p_collision_result) {
-    // TODO
+void BaseMovement::_handle_collision(const Vector3 &p_velocity, const Ref<PhysicsTestMotionResult3D> &p_collision_result) {
+    PhysicsServer3D *ps = PhysicsServer3D::get_singleton();
+    const float our_mass = movement_settings->get_push_mass();
+
+    for (int i = 0; i < p_collision_result->get_collision_count(); i++) {
+        RID other_body_rid = p_collision_result->get_collider_rid(i);
+        const bool is_rigidbody = ps->body_get_mode(other_body_rid) == PhysicsServer3D::BODY_MODE_RIGID || ps->body_get_mode(other_body_rid) == PhysicsServer3D::BODY_MODE_RIGID_LINEAR; 
+        if (!is_rigidbody) {
+            continue;
+        }
+        // Apply force to rigibodies when we hit any
+        const Transform3D body_trf = ps->body_get_state(other_body_rid, PhysicsServer3D::BODY_STATE_TRANSFORM);
+        const Vector3 body_pos = body_trf.origin;
+        const Vector3 collision_normal = p_collision_result->get_collision_normal(i);
+        const float vel_along_normal = p_velocity.dot(-collision_normal);
+        const Vector3 collision_point_relative = p_collision_result->get_collision_point(i) - body_pos;
+        const Vector3 force = (vel_along_normal * (-collision_normal)) * our_mass;
+        DebugOverlay::horz_arrow(p_collision_result->get_collision_point(i), p_collision_result->get_collision_point(i) + force.normalized(), 0.25f, Color::named("GREEN"), false, 0.25f);
+		// TODO: Do we need to multiply our_mass here again?
+        ps->body_apply_force(other_body_rid, force * our_mass, collision_point_relative);
+    }
 }
 
 void BaseMovement::_try_snap_up_stair(const Vector3 &p_movement_dir, const Transform3D &p_starting_trf, StairSnapResult &r_result) const {
