@@ -65,6 +65,7 @@ sources += Glob("src/terrain_generator/*.cpp")
 sources += Glob("src/console/*.cpp")
 sources += Glob("src/console/gui/*.cpp")
 sources += Glob("src/game/*.cpp")
+sources += Glob("src/debug/*.cpp")
 sources.append("/mnt/wwn-0x50026b7782b0ee9e-part1/porter/tracy/public/TracyClient.cpp")
 
 env.Append(BUILDERS=GLSL_BUILDERS)

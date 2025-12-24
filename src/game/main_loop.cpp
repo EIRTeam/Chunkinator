@@ -1,6 +1,8 @@
 #include "main_loop.h"
+#include "debug/debug_overlay.h"
 #include "godot_cpp/classes/window.hpp"
 #include "godot_cpp/classes/engine.hpp"
+#include "godot_cpp/core/memory.hpp"
 #include "godot_cpp/core/print_string.hpp"
 
 CVar LaniakeaMainLoop::quit_command = CVar::create_command("quit", "Quits the game");
@@ -21,8 +23,17 @@ void LaniakeaMainLoop::_initialize() {
     print_line(String("Shinobu Engine v{major}.{minor}.{status}.{build}.{hash} - https://eirteam.moe").format(version_info));
 
     quit_command.connect_command_callback(callable_mp(static_cast<SceneTree*>(this), &SceneTree::quit).bind(0));
+
+    debug_overlay = memnew(DebugOverlay);
+    debug_overlay->initialize(this);
+}
+
+bool LaniakeaMainLoop::_process(double p_delta) {
+    debug_overlay->advance();
+    return SceneTree::_process(p_delta);
 }
 
 void LaniakeaMainLoop::_finalize() {
     memdelete(console_system);
+    memdelete(debug_overlay);
 }
