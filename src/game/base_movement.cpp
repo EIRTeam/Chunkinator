@@ -47,7 +47,35 @@ void BaseMovement::update(float p_delta) {
 
     PhysicsServer3D::get_singleton()->body_set_state(body, PhysicsServer3D::BODY_STATE_TRANSFORM, owner_node->get_global_transform());
 
+    MovementPassResult lateral_pass_result;
+    MovementPassResult gravity_pass_result;
+    _do_movement_pass(MovementPass::LATERAL, p_delta, lateral_pass_result);
+    _do_movement_pass(MovementPass::GRAVITY, p_delta, gravity_pass_result);
+    bool did_movement_snap = lateral_pass_result.movement_snapped;
+    if (gravity_pass_result.hit_something) {
+        grounded = true;
+    } else if (!get_desired_velocity().is_zero_approx()) {
+        if (grounded) {
+            grounded = false;
+            MovementPassResult snap_pass_result;
+            _do_movement_pass(MovementPass::SNAP, p_delta, snap_pass_result);
 
+            if (snap_pass_result.hit_something) {
+                did_movement_snap = true;
+                grounded = true;
+            }
+        }
+    }
+
+    if (grounded) {
+        vertical_velocity = 0.0f;
+    }
+
+    if (did_movement_snap) {
+        // TODO: add movement snapped callback
+    }
+
+    effective_velocity = (owner_node->get_global_position() - prev_pos) / p_delta;
 }
 
 void BaseMovement::_handle_collision(const Vector3 &p_velocity, const Ref<PhysicsTestMotionResult3D> &p_collision_result) {

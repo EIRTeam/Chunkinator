@@ -51,6 +51,8 @@ private:
 
     float vertical_velocity = 0.0f;
     Vector3 desired_velocity;
+    bool grounded = false;
+    Vector3 effective_velocity;
 
     void _movement_iter(const MovementIterParams &p_params, MovementIterResult &r_out) const;
     bool _test_move(const Transform3D &p_trf, const Vector3 &p_motion, Ref<PhysicsTestMotionResult3D> &r_result, float p_margin = 0.001f) const;
