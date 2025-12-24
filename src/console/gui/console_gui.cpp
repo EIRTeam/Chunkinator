@@ -171,6 +171,7 @@ ConsoleGUI::ConsoleGUI() {
     vbox->add_child(text_label);
     
     line_edit = memnew(LineEdit);
+    line_edit->set_keep_editing_on_text_submit(true);
     line_edit->set_h_size_flags(SIZE_EXPAND_FILL);
     vbox->add_child(line_edit);
     line_edit->connect("text_changed", callable_mp(this, &ConsoleGUI::_show_autocomplete));
