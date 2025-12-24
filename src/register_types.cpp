@@ -9,7 +9,13 @@
 #include "chunkinator/chunkinator_debug_snapshot_viewer.h"
 #include "chunkinator/chunkinator_debugger.h"
 #include "chunkinator/chunkinator_test.h"
+#include "console/console_system.h"
+#include "console/cvar.h"
+#include "console/gui/console_gui.h"
+#include "console/gui/console_logger.h"
 #include "example_class.h"
+#include "game/main_loop.h"
+#include "game/movement_settings.h"
 #include "indirect_mesh.h"
 #include "quadtree.h"
 #include "segment_quadtree.h"
@@ -38,6 +44,7 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level)
 	GDREGISTER_ABSTRACT_CLASS(CVarProxy);
 	GDREGISTER_ABSTRACT_CLASS(ConsoleGUI);
 	GDREGISTER_CLASS(LaniakeaMainLoop);
+	GDREGISTER_CLASS(MovementSettings);
 	GDREGISTER_ABSTRACT_CLASS(Chunkinator);
 	GDREGISTER_ABSTRACT_CLASS(ChunkinatorDebugLayerViewer);
 	GDREGISTER_ABSTRACT_CLASS(ChunkinatorDebugger);
