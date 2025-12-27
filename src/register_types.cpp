@@ -17,6 +17,7 @@
 #include "game/main_loop.h"
 #include "game/movement_settings.h"
 #include "indirect_mesh.h"
+#include "inertialization_skeleton_modifier_polynomial.h"
 #include "quadtree.h"
 #include "segment_quadtree.h"
 #include "terrain_generator/terrain_heightmap_combine_layer.h"
@@ -53,6 +54,8 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level)
 	GDREGISTER_ABSTRACT_CLASS(SegmentQuadTreeDebug);
 	GDREGISTER_ABSTRACT_CLASS(ConsoleLogger);
 	GDREGISTER_ABSTRACT_CLASS(ConsoleSystem);
+	
+	GDREGISTER_CLASS(InertializationSkeletonModifierPolynomial);
 }
 
 void uninitialize_gdextension_types(ModuleInitializationLevel p_level) {
