@@ -13,11 +13,6 @@ void InertializationSkeletonModifierPolynomial::_recreate_data_arrays() {
     current_frame_data.resize(bone_count);
     last_frame_data.resize(bone_count);
     inert_data.resize(bone_count);
-
-    for (int i = 0; i < get_skeleton()->get_bone_count(); i++) {
-        print_line(i, get_skeleton()->get_bone_name(i));
-    }
-    print_line("MARUJEO COMPLETE");
 }
 
 void calculate_inertialization_constants(const float p_x0, const float p_v0, float &r_A, float &r_B, float &r_C, const float p_accel, float &rp_desired_blend_time) {
@@ -32,14 +27,12 @@ void calculate_inertialization_constants(const float p_x0, const float p_v0, flo
 	r_C = -((3.0 * p_accel * bt_2 + 12.0 * p_v0 * rp_desired_blend_time + 20.0 * p_x0) / (2.0 * bt_3));
 }
 
-static int test_bone = 1;
-
 void InertializationSkeletonModifierPolynomial::_begin_inertialization(double p_delta) {
     Skeleton3D *skel = get_skeleton();
     inertialization_time = 0.0f;
     int inertialized_bones = 0;
     for (int i = 0; i < bone_count; i++) {
-        const Transform3D bone_trf = skel->get_bone_global_pose(i);
+        const Transform3D bone_trf = skel->get_bone_pose(i);
         {
             Vector3 x_0_v = current_frame_data[i].position - bone_trf.origin;
             const Vector3 last_frame_pos = last_frame_data[i].position;
@@ -47,16 +40,25 @@ void InertializationSkeletonModifierPolynomial::_begin_inertialization(double p_
             
             if (x_0_v.is_zero_approx()) {
                 inert_data[i].position_transition_duration = 0.0f;
-            } else {
+            // only hip bone needs position inertialization, HACK this for now...
+            } else if (i == 1) {
                 float x_0 = x_0_v.length();
                 
                 float x_m1 = x_m1_v.dot(x_0_v/x_0);
                 float v0 = (x_0-x_m1)/p_delta;
 
+                if (v0 > 0.0f) {
+                    v0 = 0.0f;
+                }
+
                 inert_data[i].offset = x_0_v;
                 inert_data[i].velocity = v0;
                 inert_data[i].position_transition_duration = 0.2f;
                 inert_data[i].position_accel = (-8.0f * v0 * inert_data[i].position_transition_duration - 20.0f * x_0) / (inert_data[i].position_transition_duration * inert_data[i].position_transition_duration);
+
+                if (inert_data[i].position_accel < 0.0f) {
+                    inert_data[i].position_accel = 0.0f;
+                }
 
                 calculate_inertialization_constants(
                     x_0,
@@ -93,7 +95,11 @@ void InertializationSkeletonModifierPolynomial::_begin_inertialization(double p_
 
             DEV_ASSERT(Math::is_finite(v0));
 
-            inert_data[i].rotation_transition_duration = 0.5f;
+            if (v0 > 0.0f) {
+                v0 = 0.0f;
+            }
+
+            inert_data[i].rotation_transition_duration = 0.1f;
             if (v0 != 0.0f) {
                 float transition_max = MIN(inert_data[i].rotation_transition_duration, -5.0 * (x0_angle / v0));
                 if (transition_max > 0.0f) {
@@ -126,15 +132,10 @@ void InertializationSkeletonModifierPolynomial::_begin_inertialization(double p_
                 inert_data[i].rotation_accel,
                 inert_data[i].rotation_transition_duration
             );
-
-            if (i == test_bone) {
-                print_line(current_frame_data[i].rotation.angle_to(target_rot));
-                print_line(x0_angle);
-            }
         }
     }
 
-    print_line("Inertialized ", inertialized_bones, " bones!");
+    print_verbose("Inertialized ", inertialized_bones, " bones!");
     inertializing = true;
 }
 
@@ -152,9 +153,8 @@ void InertializationSkeletonModifierPolynomial::_process_inertialization(double 
     inertializing = false;
     for (int i = 0; i < bone_count; i++) {
         const InertializationData &bone_data = inert_data[i];
-        Transform3D bone_trf = skel->get_bone_global_pose(i);
-        //const bool needs_to_inertialize_position = inertialization_time < bone_data.position_transition_duration;
-        const bool needs_to_inertialize_position = false;
+        Transform3D bone_trf = skel->get_bone_pose(i);
+        const bool needs_to_inertialize_position = inertialization_time < bone_data.position_transition_duration;
         const bool needs_to_inertialize_rotation = inertialization_time < bone_data.rotation_transition_duration;
 
         if (needs_to_inertialize_rotation) {
@@ -167,22 +167,6 @@ void InertializationSkeletonModifierPolynomial::_process_inertialization(double 
                 bone_data.rotation_accel,
                 inertialization_time
             );
-
-            if (i == test_bone) {
-
-                Vector3 current_axis = bone_data.rot_offset_axis;
-                float current_angle = new_angle;
-
-                /*UtilityFunctions::prints("A =", bone_data.rotation_A);
-                UtilityFunctions::prints("B =", bone_data.rotation_B);
-                UtilityFunctions::prints("C =", bone_data.rotation_C);
-                UtilityFunctions::prints("accel =", bone_data.rotation_accel);
-                UtilityFunctions::prints("v0 =", bone_data.rot_velocity);
-                UtilityFunctions::prints("x0 =", bone_data.rot_offset_angle);
-                UtilityFunctions::prints("duration =", bone_data.rotation_transition_duration);
-                UtilityFunctions::prints("new_angle =", new_angle);
-                UtilityFunctions::prints("time =", inertialization_time);*/
-            }
 
             const Quaternion diff = LNMath::quat_from_angle_axis(new_angle, bone_data.rot_offset_axis);
             const Quaternion new_rot = diff * bone_trf.basis.get_rotation_quaternion();
@@ -203,7 +187,7 @@ void InertializationSkeletonModifierPolynomial::_process_inertialization(double 
         }
 
         if (needs_to_inertialize_position || needs_to_inertialize_rotation) {
-            skel->set_bone_global_pose(i, bone_trf);
+            skel->set_bone_pose(i, bone_trf);
             inertializing = true;
         }
     }
@@ -215,7 +199,7 @@ void InertializationSkeletonModifierPolynomial::_update_data_arrays(double p_del
     last_frame_data = current_frame_data;
 
     for (int i = 0; i < skel->get_bone_count(); i++) {
-        const Transform3D bone_trf = skel->get_bone_global_pose(i);
+        const Transform3D bone_trf = skel->get_bone_pose(i);
         current_frame_data[i].position = bone_trf.origin;
         current_frame_data[i].rotation = bone_trf.basis.get_rotation_quaternion();
     }
@@ -250,5 +234,5 @@ void InertializationSkeletonModifierPolynomial::queue_inertialization() {
 }
 
 void InertializationSkeletonModifierPolynomial::_process_modification_with_delta(double p_delta) {
-
+    _run_process(p_delta);
 }
