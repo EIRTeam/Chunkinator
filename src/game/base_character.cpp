@@ -1,0 +1,209 @@
+#include "base_character.h"
+#include "debug/debug_overlay.h"
+#include "game/biped_animation_base.h"
+#include "game/bullet_trail.h"
+#include "game/main_loop.h"
+#include "game/movement_settings.h"
+#include "game/weapon_model.h"
+#include "godot_cpp/classes/node.hpp"
+#include "godot_cpp/classes/engine.hpp"
+#include "godot_cpp/classes/physics_direct_space_state3d.hpp"
+#include "godot_cpp/classes/physics_ray_query_parameters3d.hpp"
+#include "godot_cpp/classes/physics_server3d.hpp"
+#include "godot_cpp/classes/scene_tree.hpp"
+#include "godot_cpp/classes/window.hpp"
+#include "godot_cpp/classes/world3d.hpp"
+#include "physics_layers.h"
+#include "game/weapon_instance.h"
+
+void BaseCharacter::_bind_methods() {
+    MAKE_BIND_NODE(BaseCharacter, model, CharacterModel);
+}
+
+Movement::MovementSpeed BaseCharacter::get_desired_movement_speed() const {
+    static StringName move_sprint = "sprint";
+    if (is_action_pressed(InputCommand::SPRINT)) {
+        return input_state.movement_input.length() > 0.0f ? Movement::MovementSpeed::SPRINTING : Movement::MovementSpeed::IDLING;
+    }
+
+    if (input_state.movement_input.length() > 0.5f) {
+        return Movement::MovementSpeed::RUNNING;
+    }
+    if (input_state.movement_input.length() > 0.0f) {
+        return Movement::MovementSpeed::WALKING;
+    }
+
+    return Movement::MovementSpeed::IDLING;
+}
+
+Vector2 BaseCharacter::get_input_vector() const {
+    return input_state.movement_input;
+}
+
+Vector2 BaseCharacter::get_input_vector_transformed() const {
+    return input_state.movement_input;
+}
+
+bool BaseCharacter::is_action_pressed(InputCommand p_command) const {
+    return input_state.button_states[p_command] & InputState::PRESSED;
+}
+
+void BaseCharacter::get_aim_trajectory(int p_wapon_slot, Vector3 &r_origin, Vector3 &r_direction) {
+    r_origin = Vector3();
+    r_direction = Vector3();
+}
+
+void BaseCharacter::fire_bullet(const Vector3 &p_origin, const Vector3 &p_direction, float p_distance, int p_ammo_type, float p_damage) {
+    DebugOverlay::line(p_origin, p_origin + p_direction * p_distance, Color(1.0, 0.0, 0.0), false, 5.0f);
+    Ref<PhysicsRayQueryParameters3D> params;
+    params.instantiate();
+    params->set_from(p_origin);
+    params->set_to(p_origin + p_direction * p_distance);
+    params->set_collision_mask(PhysicsLayers::LAYER_WORLDSPAWN);
+
+    PhysicsDirectSpaceState3D *dss = get_world_3d()->get_direct_space_state();
+    Dictionary result = dss->intersect_ray(params);
+
+    const Vector3 firing_end = result.is_empty() ? params->get_to() : Vector3(result["position"]);
+
+    DebugOverlay::sphere(firing_end, 0.25f, Color(1.0f, 0.0f, 0.0f));
+
+    // Add trail
+
+    BulletTrail *trail = memnew(BulletTrail);
+    LaniakeaMainLoop::get_singleton()->get_root()->add_child(trail);
+
+    Vector3 trail_origin = p_origin;
+
+    if (per_slot_weapon_visual[WEAPON_SLOT_PRIMARY] != nullptr && per_slot_weapon_visual[WEAPON_SLOT_PRIMARY]->get_muzzle_location()) {
+        trail_origin = per_slot_weapon_visual[WEAPON_SLOT_PRIMARY]->get_muzzle_location()->get_global_position();
+    }
+
+    trail->initialize(trail_origin, firing_end, 100.0f);
+}
+
+void BaseCharacter::set_input_state(const CharacterInputState &p_input_state) {
+    input_state = p_input_state;
+}
+
+BaseCharacter::CharacterInputState BaseCharacter::get_input_state() const {
+    return input_state;
+}
+
+void BaseCharacter::_physics_process(double p_delta) {
+    if (Engine::get_singleton()->is_editor_hint()) {
+        return;
+    }
+
+    const Vector3 effective_vel = movement.get_effective_velocity();
+    animation->set_locomotion_effective_velocity(effective_vel);
+
+    if (effective_vel.length() > 0.1f) {
+        const Vector3 movement_direction = effective_vel.normalized();
+        const float angle = Math::rad_to_deg(movement_direction.signed_angle_to(model->get_target_facing_direction(), Vector3(0.0f, 1.0f, 0.0f)));
+        animation->set_locomotion_angle(angle);
+    }
+
+    if (effective_vel.length() > 0.1f) {
+        Vector3 normalized_vel = effective_vel;
+        normalized_vel.y = 0.0f;
+        normalized_vel.normalize();
+        
+        if (normalized_vel.is_normalized()) {
+            model->set_target_facing_direction(normalized_vel);
+        }
+    }
+    movement.set_desired_movement_speed(get_desired_movement_speed());
+    movement.set_input_vector(get_input_vector_transformed());
+    movement.update(p_delta);
+}
+
+void BaseCharacter::_process(double p_delta) {
+    if (Engine::get_singleton()->is_editor_hint()) {
+        return;
+    }
+    animation->update(get_desired_movement_speed(), p_delta);
+}
+
+void BaseCharacter::_ready() {
+    if (Engine::get_singleton()->is_editor_hint()) {
+        return;
+    }
+
+    movement_settings = get_movement_settings();
+    movement.initialize(movement_settings, this);
+    animation->initialize(movement_settings, model);
+}
+
+Ref<MovementSettings> BaseCharacter::get_movement_settings() const {
+    Ref<MovementSettings> setts;
+    setts.instantiate();
+    return setts;
+}
+
+BaseCharacter::FacingDirectionMode BaseCharacter::get_facing_direction_mode() const {
+    return facing_direction_mode;
+}
+
+void BaseCharacter::set_facing_direction_mode(const FacingDirectionMode &facing_direction_mode_)
+{
+    facing_direction_mode = facing_direction_mode_;
+}
+
+Vector3 BaseCharacter::get_firing_position(int p_weapon_slot) const {
+    if (model != nullptr) {
+        return model->get_firing_position_node()->get_global_position();
+    }
+    return Vector3();
+}
+
+Ref<WeaponInstanceBase> BaseCharacter::get_equipped_weapon(const WeaponSlot p_slot) const {
+    ERR_FAIL_INDEX_V(p_slot, WEAPON_SLOT_MAX, nullptr);
+    return equipped_weapons[p_slot];
+}
+
+Vector3 BaseCharacter::get_facing_direction() const {
+    return model->get_target_facing_direction();
+}
+
+void BaseCharacter::add_collision_exception(RID p_body) {
+    movement.add_collision_exception(p_body);
+}
+
+void BaseCharacter::remove_collision_exception(RID p_body) {
+    movement.remove_collision_exception(p_body);
+}
+
+BaseCharacter::BaseCharacter() {
+    set_physics_interpolation_mode(PHYSICS_INTERPOLATION_MODE_ON);
+    animation = memnew(BipedAnimationBase);
+}
+
+BaseCharacter::~BaseCharacter() {
+    memdelete(animation);
+}
+
+void BaseCharacter::equip_weapon(WeaponSlot p_slot, Ref<WeaponInstanceBase> p_weapon) {
+    if (equipped_weapons[p_slot].is_valid()) {
+        if (per_slot_weapon_visual[p_slot] != nullptr) {
+            memfree(per_slot_weapon_visual[p_slot]);
+            per_slot_weapon_visual[p_slot] = nullptr;
+        }
+        equipped_weapons[p_slot] = Ref<WeaponInstanceBase>();
+    }
+
+    equipped_weapons[p_slot] = p_weapon;
+    
+    if (!p_weapon.is_valid()) {
+        return;
+    }
+
+    if (model->get_hand_attachment_node() == nullptr) {
+        return;
+    }
+
+    if (WeaponModel *weapon_visual = p_weapon->instantiate_visuals(); weapon_visual != nullptr) {
+        model->get_hand_attachment_node()->add_child(weapon_visual);
+        per_slot_weapon_visual[p_slot] = weapon_visual;
+    }
+}

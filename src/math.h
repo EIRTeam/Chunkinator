@@ -49,6 +49,14 @@ static _FORCE_INLINE_ Vector3 quat_to_scaled_angle_axis(Quaternion q, float eps 
 	return 2.0f * quat_log(q);
 }
 
+static _FORCE_INLINE_ Quaternion quat_mul(Quaternion q, Quaternion p)
+{
+  return Quaternion(
+	  p.w*q.x + p.x*q.w - p.y*q.z + p.z*q.y,
+	  p.w*q.y + p.x*q.z + p.y*q.w - p.z*q.x,
+	  p.w*q.z - p.x*q.y + p.y*q.x + p.z*q.w,
+	  p.w*q.w - p.x*q.x - p.y*q.y - p.z*q.z);
+}
 
 static inline void quat_to_angle_axis(Quaternion q, float& angle, Vector3& axis, float eps=1e-8f)
 {

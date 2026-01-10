@@ -6,4 +6,11 @@ namespace Movement {
         CROUCHING,
         STANCE_MAX
     };
+
+    enum MovementSpeed {
+        IDLING,
+        WALKING,
+        RUNNING,
+        SPRINTING
+    };
 }

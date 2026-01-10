@@ -14,16 +14,31 @@
 #include "console/gui/console_gui.h"
 #include "console/gui/console_logger.h"
 #include "example_class.h"
+#include "game/base_character.h"
+#include "game/biped_animation_base.h"
+#include "game/bullet_trail.h"
+#include "game/character_model.h"
 #include "game/main_loop.h"
 #include "game/movement_settings.h"
+#include "game/physics_prop.h"
+#include "game/player_character.h"
+#include "game/protagonist_player_character.h"
+#include "game/weapon_gravitygun.h"
+#include "game/weapon_instance.h"
+#include "game/weapon_firearm.h"
+#include "game/weapon_model.h"
+#include "game/weapon_rifle_test.h"
 #include "indirect_mesh.h"
-#include "inertialization_skeleton_modifier_polynomial.h"
+#include "animation/inertialization_skeleton_modifier_polynomial.h"
 #include "quadtree.h"
 #include "segment_quadtree.h"
 #include "terrain_generator/terrain_heightmap_combine_layer.h"
 #include "terrain_generator/terrain_manager.h"
 #include "terrain_generator/terrain_settings.h"
 #include "indirect_mesh_instance_3d.h"
+#include "game/player_camera.h"
+#include "game/player_character_milk.h"
+#include "animation/hip_rotator_modifier.h"
 
 using namespace godot;
 
@@ -44,6 +59,7 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level)
 	GDREGISTER_CLASS(TerrainHeightNoiseLayerSettings);
 	GDREGISTER_ABSTRACT_CLASS(CVarProxy);
 	GDREGISTER_ABSTRACT_CLASS(ConsoleGUI);
+	GDREGISTER_CLASS(PlayerCamera);
 	GDREGISTER_CLASS(LaniakeaMainLoop);
 	GDREGISTER_CLASS(MovementSettings);
 	GDREGISTER_ABSTRACT_CLASS(Chunkinator);
@@ -54,6 +70,21 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level)
 	GDREGISTER_ABSTRACT_CLASS(SegmentQuadTreeDebug);
 	GDREGISTER_ABSTRACT_CLASS(ConsoleLogger);
 	GDREGISTER_ABSTRACT_CLASS(ConsoleSystem);
+	GDREGISTER_ABSTRACT_CLASS(BaseCharacter);
+	GDREGISTER_ABSTRACT_CLASS(WeaponInstanceBase);
+	GDREGISTER_ABSTRACT_CLASS(WeaponFirearmInstance);
+	GDREGISTER_ABSTRACT_CLASS(WeaponRifleTest);
+	GDREGISTER_ABSTRACT_CLASS(BipedAnimationBase);
+	GDREGISTER_CLASS(PlayerUI);
+	GDREGISTER_CLASS(CharacterModel);
+	GDREGISTER_CLASS(PlayerCharacter);
+	GDREGISTER_CLASS(PlayerCharacterProtagonist);
+	GDREGISTER_CLASS(PlayerCharacterMilkCarried);
+	GDREGISTER_ABSTRACT_CLASS(BulletTrail);
+	GDREGISTER_CLASS(HipRotatorModifier3D);
+	GDREGISTER_CLASS(WeaponModel);
+	GDREGISTER_CLASS(WeaponGravityGun);
+	GDREGISTER_CLASS(LaniakeaPhysicsProp);
 	
 	GDREGISTER_CLASS(InertializationSkeletonModifierPolynomial);
 }

@@ -10,6 +10,7 @@
 #include "godot_cpp/classes/rich_text_label.hpp"
 #include "godot_cpp/classes/v_box_container.hpp"
 #include "godot_cpp/classes/rich_text_label.hpp"
+#include "godot_cpp/classes/input.hpp"
 #include "godot_cpp/core/error_macros.hpp"
 
 void ConsoleGUI::_shortcut_input(const Ref<InputEvent> &p_event) {
@@ -81,11 +82,15 @@ void ConsoleGUI::_notification(int p_what) {
 
 void ConsoleGUI::hide_console() {
     hide();
+    Input::get_singleton()->set_mouse_mode(prev_mouse_mode);
 }
 
 void ConsoleGUI::show_console() {
     show();
     line_edit->grab_focus();
+
+    prev_mouse_mode = Input::get_singleton()->get_mouse_mode();
+    Input::get_singleton()->set_mouse_mode(Input::MOUSE_MODE_VISIBLE);
 }
 
 void ConsoleGUI::_bind_methods() {

@@ -16,9 +16,9 @@ class ConsoleSystem : public Object {
     HashMap<StringName, Ref<CVarProxy>> cvar_proxies; 
     static ConsoleSystem *singleton;
 
-    void register_cvar(CVar* p_cvar);
     Ref<CVarProxy> get_proxy(const StringName &p_cvar) const;
     void _update_cvar_autosave(CVar *p_cvar);
+    void register_cvar(CVar* p_cvar);
 public:
     static void _bind_methods() {};
     static ConsoleSystem *get_singleton();

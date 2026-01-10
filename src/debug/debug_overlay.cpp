@@ -5,7 +5,9 @@
 #include "godot_cpp/classes/cylinder_shape3d.hpp"
 #include "godot_cpp/classes/geometry_instance3d.hpp"
 #include "godot_cpp/classes/immediate_mesh.hpp"
+#include "godot_cpp/classes/engine.hpp"
 #include "godot_cpp/classes/main_loop.hpp"
+#include "godot_cpp/classes/node.hpp"
 #include "godot_cpp/classes/time.hpp"
 #include "godot_cpp/classes/mesh_instance3d.hpp"
 #include "godot_cpp/classes/scene_tree.hpp"
@@ -127,12 +129,15 @@ void DebugOverlay::_dispose_overlay(int p_idx) {
     overlays.remove_at_unordered(p_idx);
 }
 
-void DebugOverlay::advance() {
+void DebugOverlay::advance(ProcessPass p_pass) {
     if (overlays_frozen_cvar.get_bool()) {
         return;
     }
     for (int i = overlays.size()-1; i >= 0; i--) {
         const Overlay &overlay = overlays[i];
+        if (overlay.process_pass != p_pass) {
+            continue;
+        }
         if (overlay.end_time <= (Time::get_singleton()->get_ticks_usec() / 1000000.0f)) {
             _dispose_overlay(i);            
         }
@@ -151,10 +156,14 @@ void DebugOverlay::_register_overlay(const DebugOverlay::Overlay &p_overlay) {
         return;
     }
 
+    const bool in_physics = Engine::get_singleton()->is_in_physics_frame();
+
     for (Node3D *node : p_overlay.nodes) {
         root_node->add_child(node);
     }
-    overlays.push_back(p_overlay);
+    DebugOverlay::Overlay overlay = p_overlay;
+    overlay.process_pass = in_physics ? PHYSICS : PROCESS;
+    overlays.push_back(overlay);
 }
 
 void DebugOverlay::sphere(const Vector3 &p_center, const float p_radius, const Color &p_color, const bool p_depth_test, const float p_duration) {

@@ -20,7 +20,7 @@ class CVarProxy : public RefCounted {
 };
 
 class CVar {
-    using DefaultValueRaw = std::variant<const char*, int, float, bool>;
+    using DefaultValueRaw = std::variant<const char*, int, float, bool, Vector3>;
     enum CVarFlags {
         FLAG_IS_COMMAND = 1
     };
@@ -69,7 +69,7 @@ public:
     
     ~CVar();
     
-    static CVar create_variable(const char *p_name, int p_type, DefaultValueRaw p_default, const char *p_description, int p_property_hint, const char *p_property_hint_text);
+    static CVar create_variable(const char *p_name, int p_type, DefaultValueRaw p_default, const char *p_description, int p_property_hint = PROPERTY_HINT_NONE, const char *p_property_hint_text = "");
     static CVar create_command(const char *p_name, const char *p_description);
 
     String get_cvar_name_string() const;
@@ -79,9 +79,12 @@ public:
     bool is_command() const;
     void execute_command();
     void connect_command_callback(Callable p_callable);
+    void connect_cvar_changed_callback(Callable p_callable);
+    void notify_cvar_changed();
 
     float get_float() const;
     bool get_bool() const;
+    Vector3 get_vector3() const;
 
     friend class ConsoleSystem;
 };

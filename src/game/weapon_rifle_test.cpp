@@ -1,0 +1,13 @@
+#include "weapon_rifle_test.h"
+#include "game/main_loop.h"
+#include "game/weapon_rifle_test.h"
+#include "godot_cpp/classes/packed_scene.hpp"
+#include "godot_cpp/classes/resource_loader.hpp"
+#include "weapon_model.h"
+
+WeaponModel *WeaponRifleTest::instantiate_visuals() const {
+    Ref<PackedScene> visuals = ResourceLoader::get_singleton()->load("res://models/weapons/w_rifle.tscn");
+    WeaponModel *visual_instance = Object::cast_to<WeaponModel>(visuals->instantiate());
+    return visual_instance;
+}
+

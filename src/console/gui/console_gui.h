@@ -3,6 +3,7 @@
 #include "console/gui/console_logger.h"
 #include "godot_cpp/classes/panel_container.hpp"
 #include "godot_cpp/classes/input_event.hpp"
+#include "godot_cpp/classes/input.hpp"
 
 using namespace godot;
 
@@ -29,6 +30,7 @@ class ConsoleGUI : public Control {
     void _on_log_bbcode(const String &p_text);
     void _on_command_submitted(const String &p_command);
     Ref<ConsoleLogger> logger;
+    Input::MouseMode prev_mouse_mode = Input::MOUSE_MODE_VISIBLE;
 public:
 	virtual void _shortcut_input(const Ref<InputEvent> &p_event) override;
 	virtual void _input(const Ref<InputEvent> &p_event) override;

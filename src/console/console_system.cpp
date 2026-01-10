@@ -24,10 +24,16 @@ void ConsoleSystem::register_cvar(CVar* p_cvar) {
     Ref<CVarProxy> proxy;
     proxy.instantiate();
     cvar_proxies.insert(p_cvar->cvar_data->cvar_name, proxy);
+
+    if (cvar_config_file->has_section(CVAR_SECTION_NAME)) {
+        if (cvar_config_file->has_section_key(CVAR_SECTION_NAME, p_cvar->cvar_data->cvar_name_str)) {
+            set_cvar(p_cvar->cvar_data->cvar_name_str, cvar_config_file->get_value(CVAR_SECTION_NAME, p_cvar->cvar_data->cvar_name_str));
+        }
+    }
 }
 
 Ref<CVarProxy> ConsoleSystem::get_proxy(const StringName &p_cvar) const {
-    ERR_FAIL_COND_V_MSG(!cvar_proxies.has(p_cvar), nullptr, "Invalid CVar");
+    ERR_FAIL_COND_V_MSG(!cvar_proxies.has(p_cvar), nullptr, vformat("Invalid CVar %s", p_cvar));
     return cvar_proxies[p_cvar];
 }
 
@@ -36,23 +42,17 @@ ConsoleSystem *ConsoleSystem::get_singleton() {
 }
 
 void ConsoleSystem::initialize() {
+    cvar_config_file.instantiate();
+    if (FileAccess::file_exists(CVAR_CONFIG_FILE_PATH)) {
+        cvar_config_file->load("user://cvars.cfg");
+    }
+
     std::vector<CVar::DelayedInitData> delayed_init_arr = CVar::get_delayed_init_arr();
     for (int i = 0; i < delayed_init_arr.size(); i++) {
         delayed_init_arr[i].cvar->_delayed_init(delayed_init_arr[i]);
     }
 
     print_changed_command.connect_command_callback(callable_mp(this, &ConsoleSystem::print_changed_cvars));
-
-    cvar_config_file.instantiate();
-    if (FileAccess::file_exists(CVAR_CONFIG_FILE_PATH)) {
-        cvar_config_file->load("user://cvars.cfg");
-
-        if (cvar_config_file->has_section(CVAR_SECTION_NAME)) {
-            for (const String &key : cvar_config_file->get_section_keys(CVAR_SECTION_NAME)) {
-                set_cvar(key, cvar_config_file->get_value(CVAR_SECTION_NAME, key));
-            }  
-        }
-    }
 }
 
 CVar *ConsoleSystem::get_cvar(StringName p_cvar_name) {
@@ -69,6 +69,7 @@ bool ConsoleSystem::set_cvar(const StringName &p_cvar, const Variant &p_value, b
     ERR_FAIL_COND_V_MSG(input_type != it->value->cvar_data->type, false, vformat("Tried to set CVar %s with Variant of type %d but expected %d!", p_cvar, input_type, it->value->cvar_data->type));
 
     it->value->cvar_data->current_value = p_value;
+    it->value->notify_cvar_changed();
 
     return true;
 }

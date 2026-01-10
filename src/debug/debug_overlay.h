@@ -14,10 +14,16 @@ class DebugOverlay {
     static DebugOverlay *singleton;
     Node3D *root_node = nullptr;
     static CVar overlays_frozen_cvar;
-    
+public:
+    enum ProcessPass {
+        PROCESS,
+        PHYSICS
+    };
+private:
     struct Overlay {
         Vector<Node3D*> nodes;
         float end_time = 0.0f;
+        ProcessPass process_pass = PROCESS;  
     };
 
     LocalVector<Overlay> overlays;
@@ -35,7 +41,7 @@ class DebugOverlay {
     static MeshInstance3D *_create_mesh_instance(const Ref<Mesh> &p_mesh, const Color &p_color, const bool p_depth_test = true);
     void _dispose_overlay(int p_idx);
 public:
-    void advance();
+    void advance(ProcessPass p_pass);
     void initialize(SceneTree *p_main_loop);
     static DebugOverlay *get_singleton();
     static void sphere(const Vector3 &p_center, const float p_radius, const Color &p_color, const bool p_depth_test = true, const float p_duration = 0.0f);

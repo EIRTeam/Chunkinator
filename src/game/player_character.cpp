@@ -1,0 +1,336 @@
+#include "player_character.h"
+#include "bind_macros.h"
+#include "debug/debug_constexpr.h"
+#include "debug/debug_overlay.h"
+#include "game/base_character.h"
+#include "game/biped_animation_base.h"
+#include "game/main_loop.h"
+#include "game/player_character_milk.h"
+#include "game/movement_settings.h"
+#include "game/movement_shared.h"
+#include "game/player_character_milk.h"
+#include "game/weapon_firearm.h"
+#include "game/weapon_gravitygun.h"
+#include "game/weapon_instance.h"
+#include "game/weapon_model.h"
+#include "game/weapon_rifle_test.h"
+#include "gdextension_interface.h"
+#include "godot_cpp/classes/engine.hpp"
+#include "godot_cpp/classes/global_constants.hpp"
+#include "godot_cpp/classes/packed_scene.hpp"
+#include "godot_cpp/classes/physics_direct_space_state3d.hpp"
+#include "godot_cpp/classes/physics_ray_query_parameters3d.hpp"
+#include "godot_cpp/classes/ref.hpp"
+#include "godot_cpp/classes/resource_loader.hpp"
+#include "godot_cpp/classes/input.hpp"
+#include "godot_cpp/classes/window.hpp"
+#include "godot_cpp/classes/world3d.hpp"
+#include "godot_cpp/core/error_macros.hpp"
+#include "godot_cpp/variant/packed_vector3_array.hpp"
+#include "godot_cpp/variant/transform3d.hpp"
+#include "physics_layers.h"
+
+CVar PlayerCharacter::player_camera_horizontal_deadzone_radius = CVar::create_variable("player.camera_horizontal_deadzone_radius", GDEXTENSION_VARIANT_TYPE_FLOAT, 0.1f, "Camera horizontal deadzone when not aiming.", PROPERTY_HINT_NONE, "");
+CVar PlayerCharacter::player_camera_distance_aim = CVar::create_variable("player.camera_distance_aim", GDEXTENSION_VARIANT_TYPE_FLOAT, 1.5f, "Camera distance when aiming.", PROPERTY_HINT_NONE, "");
+CVar PlayerCharacter::player_camera_distance = CVar::create_variable("player.camera_distance", GDEXTENSION_VARIANT_TYPE_FLOAT, 2.5f, "Camera distance when not aiming.", PROPERTY_HINT_NONE, "");
+
+void PlayerCharacter::_bind_methods() {
+    MAKE_BIND_NODE(PlayerCharacter, camera_offset_target, Node3D);
+    MAKE_BIND_NODE(PlayerCharacter, player_ui, PlayerUI);
+}
+
+Vector2 PlayerCharacter::get_input_vector_transformed() const {
+    Vector2 input_vector = get_input_vector();
+    return camera->transform_input(input_vector);
+}
+
+PlayerCharacter::PlayerCharacter() {
+}
+
+void PlayerCharacter::_ready() {
+    if (Engine::get_singleton()->is_editor_hint()) {
+        return;
+    }
+
+    Ref<WeaponRifleTest> rifle_test;
+    Ref<WeaponGravityGun> gravity_gun_milk;
+    rifle_test.instantiate();
+    gravity_gun_milk.instantiate();
+    equip_weapon(WEAPON_SLOT_PRIMARY, rifle_test);
+    equip_weapon(WEAPON_SLOT_SECONDARY, gravity_gun_milk);
+
+    movement_settings = get_movement_settings();
+
+    /*Ref<MovementSettings> movement_settings = ResourceLoader::get_singleton()->load("res://player_movement.tres");
+    if (!movement_settings.is_valid()) {
+        // Fallback!
+        movement_settings.instantiate();
+    }
+    movement.initialize(movement_settings, this);
+    */
+    camera = memnew(PlayerCamera);
+    add_child(camera);
+    camera->set_as_top_level(true);
+
+    for (int i = 0; i < WEAPON_SLOT_MAX; i++) {
+        SlotAimOcclusionInformation &occlusion_info = per_slot_aim_occlusion_info[i];
+        occlusion_info.target_position_interp_node = memnew(Node3D);
+        add_child(occlusion_info.target_position_interp_node);
+        occlusion_info.target_position_interp_node->set_as_top_level(true);
+        occlusion_info.target_position_interp_node->set_physics_interpolation_mode(Node::PHYSICS_INTERPOLATION_MODE_ON);
+    }
+
+
+
+    if (Object::cast_to<PlayerCharacterMilkCarried>(this) == nullptr) {
+
+    }
+
+    BaseCharacter::_ready();
+
+    animation->set_weapon_animation_type(BipedAnimationBase::WEAPON_ANIMATION_TYPE_RIFLE);
+}
+
+void PlayerCharacter::_process(double p_delta) {
+    if (Engine::get_singleton()->is_editor_hint()) {
+        return;
+    }
+
+    const bool is_aiming = is_action_pressed(InputCommand::AIM);
+
+    camera->set_enable_leash(!is_aiming);
+    camera->set_horizontal_deadzone_radius(is_aiming ? 0.0f : player_camera_horizontal_deadzone_radius.get_float());
+
+    if (camera_offset_target != nullptr) {
+        camera->update(movement.get_effective_velocity(), camera_offset_target->get_global_transform_interpolated().origin);
+    } else {
+        camera->update(movement.get_effective_velocity(), get_global_transform_interpolated().origin);
+    }
+
+    _ui_process(p_delta);
+
+    Vector3 camera_aim_origin;
+    Vector3 camera_aim_normal;
+    get_camera_aim_trajectory(camera_aim_origin, camera_aim_normal);
+
+    animation->set_aim_x_angle(-(camera_aim_normal.angle_to(Vector3(0.0f, 1.0f, 0.0f)) - Math::deg_to_rad(90.0f)));
+
+    animation->set_is_aiming(is_aiming);
+
+    BaseCharacter::_process(p_delta);
+}
+
+void PlayerCharacter::_physics_process(double p_delta) {
+    if (Engine::get_singleton()->is_editor_hint()) {
+        return;
+    }   
+    CharacterInputState input;
+    static StringName move_left = "move_left";
+    static StringName move_right = "move_right";
+    static StringName move_forward = "move_forward";
+    static StringName move_back = "move_back";
+    static StringName primary_fire = "primary_fire";
+    static StringName secondary_fire = "secondary_fire";
+    static StringName sprint = "sprint";
+    static StringName aim = "aim";
+    
+    input.movement_input = Input::get_singleton()->get_vector(move_left, move_right, move_forward, move_back);
+    input.button_states[InputCommand::AIM] = get_action_state(aim);
+    input.button_states[InputCommand::PRIMARY_FIRE] = get_action_state(primary_fire);
+    input.button_states[InputCommand::SECONDARY_FIRE] = get_action_state(secondary_fire);
+    input.button_states[InputCommand::SPRINT] = get_action_state(sprint);
+    
+    set_input_state(input);
+    _movement_physics_process(p_delta);
+    BaseCharacter::_physics_process(p_delta);
+}
+
+void PlayerCharacter::_movement_physics_process(float p_delta) {
+    if (Engine::get_singleton()->is_editor_hint()) {
+        return;
+    }
+
+    if (Input::get_singleton()->is_mouse_button_pressed(MOUSE_BUTTON_LEFT)) {
+        Input::get_singleton()->set_mouse_mode(Input::MOUSE_MODE_CAPTURED);
+    }
+
+
+    const bool is_sprinting = is_action_pressed(InputCommand::SPRINT);
+
+    const bool is_aiming = is_action_pressed(InputCommand::AIM);
+
+    for (int slot_i = 0; slot_i < WeaponSlot::WEAPON_SLOT_MAX; slot_i++) {
+        Ref<WeaponInstanceBase> equipped_weapon = equipped_weapons[slot_i];
+        if (!equipped_weapon.is_valid() || !is_aiming) {
+            continue;
+        }
+        // Time to do something slightly funny
+        // since we are in third person, we want to cast a ray from our firing position to wherever we are looking at
+        // this will help us set up our separate occlusion crosshair
+        
+        Vector3 camera_aim_origin;
+        Vector3 camera_aim_normal;
+        get_camera_aim_trajectory(camera_aim_origin, camera_aim_normal);
+
+        Ref<PhysicsRayQueryParameters3D> ray_query;
+        ray_query.instantiate();
+        ray_query->set_from(camera_aim_origin);
+        ray_query->set_to(camera_aim_origin + camera_aim_normal * 1000.0f);
+        ray_query->set_collision_mask(PhysicsLayers::LAYER_WORLDSPAWN | PhysicsLayers::LAYER_PROPS);
+        ray_query->set_exclude(occlusion_exceptions);
+
+        PhysicsDirectSpaceState3D *dss = get_world_3d()->get_direct_space_state();
+        const Vector3 firing_position = get_firing_position(slot_i);
+
+        Vector3 occlusion_check_target;
+
+        if (Dictionary camera_ray_out = dss->intersect_ray(ray_query); !camera_ray_out.is_empty()) {
+            occlusion_check_target = camera_ray_out["position"];
+            DebugOverlay::sphere(camera_ray_out["position"], 0.1f, Color(0.0, 1.0, 0.0f));
+            DebugOverlay::line(firing_position, camera_ray_out["position"], Color(0.0, 1.0, 0.0));
+        } else {
+            occlusion_check_target = ray_query->get_to();
+        }
+
+        ray_query->set_from(firing_position);
+        const Vector3 diff = occlusion_check_target - firing_position;
+        ray_query->set_to(firing_position + diff.limit_length(MAX(diff.length()-0.25f, 0.15f)));
+
+        SlotAimOcclusionInformation &occlusion_info = per_slot_aim_occlusion_info[slot_i];
+
+        Dictionary occlusion_check_out = dss->intersect_ray(ray_query);
+
+        if (!occlusion_check_out.is_empty()) {
+            occlusion_info.aim_target_direction = ray_query->get_from().direction_to(ray_query->get_to());
+            
+            occlusion_info.target_position_interp_node->set_global_position(occlusion_check_out["position"]);
+            if (slot_i == WEAPON_SLOT_SECONDARY) {
+                DebugOverlay::sphere(occlusion_check_out["position"], 0.1f, Color(1.0, 0.0, 0.0f));
+                DebugOverlay::line(firing_position, occlusion_check_out["position"], Color(0.0, 1.0, 0.0));
+            }
+            // Reset the physics interpolation if needed
+            if (!occlusion_info.is_target_position_occluded) {
+                occlusion_info.target_position_interp_node->reset_physics_interpolation();
+            }
+            occlusion_info.is_target_position_occluded = true;
+        } else {
+            occlusion_info.aim_target_direction = firing_position.direction_to(ray_query->get_to());
+            occlusion_info.is_target_position_occluded = false;
+            occlusion_info.target_position_interp_node->set_global_position(ray_query->get_to());
+
+            DebugOverlay::sphere(ray_query->get_to(), 0.1f, Color("PURPLE"));
+        }
+    }
+
+    set_facing_direction_mode(is_aiming ? FacingDirectionMode::CUSTOM : FacingDirectionMode::TO_MOVEMENT);
+
+    if (model) {
+        if (is_aiming) {
+            // strafe
+            Vector3 target_facing_dir = camera->get_camera()->get_global_basis().xform(Vector3(0.0, 0.0, -1.0f));
+            target_facing_dir.y = 0.0f;
+            target_facing_dir.normalize();
+
+            if (target_facing_dir.is_normalized()) {
+                model->set_target_facing_direction(target_facing_dir);
+            }
+        }
+        model->update(p_delta);
+    }
+
+    DebugOverlay::horz_arrow(get_global_position(), model->get_target_facing_direction() * 1.0f + get_global_position(), 0.25f, Color::named("Green"));
+
+    const Vector2 target_camera_framing = is_aiming ? Vector2(0.35, 0.0) : Vector2();
+    const float target_camera_distance = is_aiming ? player_camera_distance_aim.get_float() : player_camera_distance.get_float();
+
+    camera->set_framing(target_camera_framing, false);
+    camera->set_distance(target_camera_distance, false);
+
+    for (int slot_i = 0; slot_i < WEAPON_SLOT_MAX; slot_i++) {
+        Ref<WeaponInstanceBase> equipped_weapon = equipped_weapons[slot_i];
+        const InputCommand input_command = slot_i == WEAPON_SLOT_PRIMARY ? InputCommand::PRIMARY_FIRE : InputCommand::SECONDARY_FIRE;
+        const bool primary_pressed = is_action_pressed(input_command);
+        if (equipped_weapon.is_valid()) {
+            WeaponInstanceBase::WeaponButtonState button_state = {
+                .fire = primary_pressed && is_aiming
+            };
+
+            if (primary_pressed && is_aiming) {
+                equipped_weapon->primary_attack(slot_i, button_state, this);
+            }
+            equipped_weapon->post_update(slot_i, this, button_state);
+        }
+    }
+}
+
+void PlayerCharacter::_ui_process(float p_delta) {
+    // Update UI
+    const bool is_aiming = is_action_pressed(InputCommand::AIM);
+
+    if (player_ui != nullptr) {
+        for (int i = 0; i < WEAPON_SLOT_MAX; i++) {
+            const SlotAimOcclusionInformation &occlusion_info = per_slot_aim_occlusion_info[i];
+            player_ui->update_crosshair(i, camera->get_camera(), is_aiming, occlusion_info.is_target_position_occluded, occlusion_info.target_position_interp_node->get_global_transform_interpolated().origin);
+        }
+    }
+}
+
+BitField<BaseCharacter::InputState> PlayerCharacter::get_action_state(const StringName p_state) const {
+    BitField<BaseCharacter::InputState> state = 0;
+    Input *input = Input::get_singleton();
+    if (input->is_action_just_pressed(p_state)) {
+        state.set_flag(InputState::JUST_PRESSED);
+        state.set_flag(InputState::PRESSED);
+    } else if (input->is_action_pressed(p_state)) {
+        state.set_flag(InputState::PRESSED);
+    }
+
+    return state;
+}
+
+void PlayerCharacter::_camera_process(float p_delta) {
+    
+}
+
+void PlayerCharacter::get_camera_aim_trajectory(Vector3 &r_origin, Vector3 &r_direction) const {
+    const Vector2 screen_center = Vector2(get_window()->get_size()) * 0.5f;
+    r_origin = camera->get_camera()->project_ray_origin(screen_center);
+    r_direction = camera->get_camera()->project_ray_normal(screen_center);
+}
+
+void PlayerCharacter::get_aim_trajectory(int p_weapon_slot, Vector3 &r_origin, Vector3 &r_direction) {
+    ERR_FAIL_INDEX(p_weapon_slot, WEAPON_SLOT_MAX);
+    r_origin = get_firing_position(p_weapon_slot);
+    r_direction = per_slot_aim_occlusion_info[p_weapon_slot].aim_target_direction;
+}
+
+void PlayerCharacter::add_camera_kick(float p_max_vertical_kick_angle, float p_fire_duration_time, float p_slide_limit_time) {
+    camera->do_machine_gun_kick(p_max_vertical_kick_angle, p_fire_duration_time, p_slide_limit_time);
+}
+
+Ref<MovementSettings> PlayerCharacter::get_movement_settings() const {
+    Ref<MovementSettings> settings = ResourceLoader::get_singleton()->load("res://player_movement.tres");
+    ERR_FAIL_COND_V(!settings.is_valid(), BaseCharacter::get_movement_settings());
+    return settings;
+}
+
+Vector3 PlayerCharacter::get_slot_target_position(int p_slot) const {
+    ERR_FAIL_INDEX_V(p_slot, WEAPON_SLOT_MAX, Vector3());
+    return per_slot_aim_occlusion_info[p_slot].target_position_interp_node->get_global_position();
+}
+
+Transform3D PlayerCharacter::get_milk_attachment_transform() const {
+    if (model->get_milk_attachment_point()) {
+        return model->get_milk_attachment_point()->get_global_transform();
+    }
+
+    return Transform3D();
+}
+
+void PlayerCharacter::add_aim_occlusion_exception(RID p_exception) {
+    occlusion_exceptions.push_back(p_exception);
+}
+
+void PlayerCharacter::remove_occlusion_exception(RID p_exception) {
+    occlusion_exceptions.erase(p_exception);
+}

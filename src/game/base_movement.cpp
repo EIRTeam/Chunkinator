@@ -1,4 +1,5 @@
 #include "base_movement.h"
+#include "debug/debug_constexpr.h"
 #include "debug/debug_overlay.h"
 #include "game/movement_shared.h"
 #include "godot_cpp/classes/cylinder_shape3d.hpp"
@@ -9,12 +10,14 @@
 #include "godot_cpp/core/math.hpp"
 #include "godot_cpp/variant/transform3d.hpp"
 #include "physics_layers.h"
+#include "springs.h"
 
-bool BaseMovement::_test_move(const Transform3D &p_trf, const Vector3 &p_motion, Ref<PhysicsTestMotionResult3D> &r_result, float p_margin = 0.001f) const {
+bool BaseMovement::_test_move(const Transform3D &p_trf, const Vector3 &p_motion, Ref<PhysicsTestMotionResult3D> &r_result, float p_margin) const {
     Ref<PhysicsTestMotionParameters3D> params;
     params.instantiate();
     params->set_from(p_trf);
     params->set_motion(p_motion);
+    params->set_margin(p_margin);
     return PhysicsServer3D::get_singleton()->body_test_motion(body, params, r_result);
 }
 
@@ -38,11 +41,16 @@ void BaseMovement::initialize(Ref<MovementSettings> p_movement_settings, Node3D 
         body_shapes_per_stance[i] = cs;
     }
 
+    desired_velocity_spring.initialize(p_movement_settings->get_movement_halflife());
+
     ps->body_set_collision_layer(body, PhysicsLayers::LAYER_ENTITY_MOVEMENT_BOXES);
     ps->body_set_collision_mask(body, PhysicsLayers::LAYER_WORLDSPAWN | PhysicsLayers::LAYER_PROPS);
 }
 
 void BaseMovement::update(float p_delta) {
+
+    desired_velocity_spring.update(get_desired_velocity(), p_delta);
+
     const Vector3 prev_pos = owner_node->get_global_position();
 
     PhysicsServer3D::get_singleton()->body_set_state(body, PhysicsServer3D::BODY_STATE_TRANSFORM, owner_node->get_global_transform());
@@ -54,7 +62,7 @@ void BaseMovement::update(float p_delta) {
     bool did_movement_snap = lateral_pass_result.movement_snapped;
     if (gravity_pass_result.hit_something) {
         grounded = true;
-    } else if (!get_desired_velocity().is_zero_approx()) {
+    } else if (!get_smoothed_desired_velocity().is_zero_approx()) {
         if (grounded) {
             grounded = false;
             MovementPassResult snap_pass_result;
@@ -76,6 +84,14 @@ void BaseMovement::update(float p_delta) {
     }
 
     effective_velocity = (owner_node->get_global_position() - prev_pos) / p_delta;
+
+    if constexpr (Debug::is_debug_enabled) {
+        constexpr int PATH_PREDICTION_STEPS = 16;
+        constexpr float PATH_PREDICTION_TIME = 3.0f;
+        
+        PackedVector3Array predicted_path = desired_velocity_spring.predict(owner_node->get_global_position(), get_desired_velocity(), PATH_PREDICTION_TIME, PATH_PREDICTION_STEPS);
+        DebugOverlay::path( predicted_path, true, Color::named("green"));
+    }
 }
 
 void BaseMovement::_handle_collision(const Vector3 &p_velocity, const Ref<PhysicsTestMotionResult3D> &p_collision_result) {
@@ -95,14 +111,50 @@ void BaseMovement::_handle_collision(const Vector3 &p_velocity, const Ref<Physic
         const float vel_along_normal = p_velocity.dot(-collision_normal);
         const Vector3 collision_point_relative = p_collision_result->get_collision_point(i) - body_pos;
         const Vector3 force = (vel_along_normal * (-collision_normal)) * our_mass;
-        DebugOverlay::horz_arrow(p_collision_result->get_collision_point(i), p_collision_result->get_collision_point(i) + force.normalized(), 0.25f, Color::named("GREEN"), false, 0.25f);
+        DebugOverlay::horz_arrow(p_collision_result->get_collision_point(i), p_collision_result->get_collision_point(i) + force.normalized(), 0.25f, Color::named("RED"), false, 0.25f);
 		// TODO: Do we need to multiply our_mass here again?
         ps->body_apply_force(other_body_rid, force * our_mass, collision_point_relative);
     }
 }
 
+Vector3 BaseMovement::get_smoothed_desired_velocity() const {
+    return desired_velocity_spring.get();
+}
+
+Vector3 BaseMovement::get_effective_velocity() const {
+    return effective_velocity;
+}
+
+Movement::MovementStance BaseMovement::get_current_stance() const {
+    return current_stance;
+}
+
+void BaseMovement::set_enabled(bool p_enabled) {
+
+    PhysicsServer3D *ps = PhysicsServer3D::get_singleton();
+
+    for (int i = 0; i < ps->body_get_shape_count(body); i++) {
+        ps->body_set_shape_disabled(body, 0, !p_enabled);
+    }
+}
+
+void BaseMovement::add_collision_exception(RID p_body) {
+    PhysicsServer3D::get_singleton()->body_add_collision_exception(body, p_body);
+}
+
+void BaseMovement::remove_collision_exception(RID p_body) {
+    PhysicsServer3D::get_singleton()->body_remove_collision_exception(body, p_body);
+}
+
+BaseMovement::~BaseMovement() {
+    if (body.is_valid()) {
+        PhysicsServer3D::get_singleton()->free_rid(body);
+    }
+}
+
 void BaseMovement::_try_snap_up_stair(const Vector3 &p_movement_dir, const Transform3D &p_starting_trf, StairSnapResult &r_result) const {
     Ref<PhysicsTestMotionResult3D> stair_up_collision;
+    stair_up_collision.instantiate();
     const float MAX_STEP_HEIGHT = movement_settings->get_max_step_height();
     const float MING_STEP_DEPTH = movement_settings->get_min_step_depth();
     
@@ -155,8 +207,8 @@ void BaseMovement::_do_movement_pass(const MovementPass p_pass, float p_delta, M
 
     switch (p_pass) {
 		case LATERAL: {
-            desired_input = get_desired_velocity().normalized();
-            remaining_motion = get_desired_velocity() * p_delta;
+            desired_input = get_smoothed_desired_velocity().normalized();
+            remaining_motion = get_smoothed_desired_velocity() * p_delta;
         } break;
 		case GRAVITY: {
             vertical_velocity = Math::move_toward(vertical_velocity, -TERMINAL_VELOCITY, GRAVITY_ACCEL * p_delta);
@@ -200,12 +252,26 @@ void BaseMovement::_do_movement_pass(const MovementPass p_pass, float p_delta, M
     }
 }
 
-void BaseMovement::set_desired_velocity(const Vector3 &p_desired_vel) {
-    desired_velocity = p_desired_vel;
+void BaseMovement::set_input_vector(const Vector2 &p_input_vector) {
+    input_vector = p_input_vector;
+}
+
+void BaseMovement::set_desired_movement_speed(Movement::MovementSpeed p_movement_speed) {
+    desired_movement_speed = p_movement_speed;
 }
 
 Vector3 BaseMovement::get_desired_velocity() const {
-    return desired_velocity;
+    const Vector3 input_vector_3d = Vector3(input_vector.x, 0.0f, input_vector.y);
+    float max_speed = 0.0f;
+
+    if (desired_movement_speed == Movement::MovementSpeed::SPRINTING) {
+        max_speed = movement_settings->get_stance_max_sprint_speed(get_current_stance());
+    } else if (desired_movement_speed == Movement::MovementSpeed::RUNNING) {
+        max_speed = movement_settings->get_stance_max_run_speed(get_current_stance());
+    } else if (desired_movement_speed == Movement::MovementSpeed::WALKING) {
+        max_speed = movement_settings->get_stance_max_walk_speed(get_current_stance());
+    }
+    return max_speed * input_vector_3d.normalized();
 }
 
 Vector3 _FORCE_INLINE_ _plane_project(const Vector3 &p_normal, const Vector3 &p_velocity) {
@@ -216,6 +282,7 @@ Vector3 _FORCE_INLINE_ _plane_project(const Vector3 &p_normal, const Vector3 &p_
 
 void BaseMovement::_movement_iter(const MovementIterParams &p_params, MovementIterResult &r_out) const {
     Ref<PhysicsTestMotionResult3D> shape_cast_result;
+    shape_cast_result.instantiate();
     r_out.new_transform = p_params.starting_trf;
     if (!_test_move(p_params.starting_trf, p_params.motion, shape_cast_result, p_params.motion_margin)) {
         r_out.done = true;
@@ -225,6 +292,8 @@ void BaseMovement::_movement_iter(const MovementIterParams &p_params, MovementIt
 
     r_out.kinematic_collision_result = shape_cast_result;
     r_out.hit_something = true;
+
+    DEV_ASSERT(shape_cast_result.is_valid());
 
     Vector3 travel = shape_cast_result->get_travel();
     Vector3 remainder = shape_cast_result->get_remainder();

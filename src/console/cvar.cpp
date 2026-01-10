@@ -111,6 +111,14 @@ void CVar::connect_command_callback(Callable p_callable) {
     ConsoleSystem::get_singleton()->get_proxy(cvar_data->cvar_name)->connect("command_executed", p_callable);
 }
 
+void CVar::connect_cvar_changed_callback(Callable p_callable) {
+    ConsoleSystem::get_singleton()->get_proxy(cvar_data->cvar_name)->connect("cvar_changed", p_callable);
+}
+
+void CVar::notify_cvar_changed() {
+    ConsoleSystem::get_singleton()->get_proxy(cvar_data->cvar_name)->emit_signal("cvar_changed");
+}
+
 float CVar::get_float() const {
     DEV_ASSERT(!is_command());
     DEV_ASSERT(cvar_data->type == GDEXTENSION_VARIANT_TYPE_FLOAT);
@@ -123,7 +131,14 @@ bool CVar::get_bool() const {
     return cvar_data->current_value;
 }
 
+Vector3 CVar::get_vector3() const {
+    DEV_ASSERT(!is_command());
+    DEV_ASSERT(cvar_data->type == GDEXTENSION_VARIANT_TYPE_VECTOR3);
+    return cvar_data->current_value;
+}
+
 void CVarProxy::_bind_methods() {
     ADD_SIGNAL(MethodInfo("command_executed"));
+    ADD_SIGNAL(MethodInfo("cvar_changed"));
 }
 
