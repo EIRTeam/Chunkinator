@@ -19,7 +19,7 @@ class LaniakeaMainLoop : public SceneTree {
     ConsoleSystem *console_system;
     ConsoleGUI *console_gui;
     DebugOverlay *debug_overlay;
-    GameRulesLaniakea *game_rules;
+    LaniakeaGameRules *game_rules;
 
     static LaniakeaMainLoop *singleton;
 public:
@@ -34,4 +34,5 @@ public:
     double get_process_time() const;
 
     static LaniakeaMainLoop *get_singleton();
+    LaniakeaGameRules *get_game_rules() const;
 };

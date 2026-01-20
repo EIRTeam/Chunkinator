@@ -25,4 +25,5 @@ public:
 
     virtual WeaponModel *instantiate_visuals() const { return nullptr; };
     virtual BipedAnimationBase::WeaponAnimationType get_weapon_animation_type() const { return BipedAnimationBase::WEAPON_ANIMATION_TYPE_NONE; };
+    virtual StringName get_item_name() const = 0;
 };

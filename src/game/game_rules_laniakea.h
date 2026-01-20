@@ -2,8 +2,8 @@
 
 #include "game_rules.h"
 
-class GameRulesLaniakea : public GameRules {
-    GDCLASS(GameRulesLaniakea, GameRules);
+class LaniakeaGameRules : public GameRules {
+    GDCLASS(LaniakeaGameRules, GameRules);
 public:
     static constexpr int RIFLE_AMMO_TYPE = 0; 
 private:

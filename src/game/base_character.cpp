@@ -186,7 +186,7 @@ BaseCharacter::~BaseCharacter() {
 void BaseCharacter::equip_weapon(WeaponSlot p_slot, Ref<WeaponInstanceBase> p_weapon) {
     if (equipped_weapons[p_slot].is_valid()) {
         if (per_slot_weapon_visual[p_slot] != nullptr) {
-            memfree(per_slot_weapon_visual[p_slot]);
+            per_slot_weapon_visual[p_slot]->queue_free();
             per_slot_weapon_visual[p_slot] = nullptr;
         }
         equipped_weapons[p_slot] = Ref<WeaponInstanceBase>();

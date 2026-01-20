@@ -11,4 +11,6 @@ class WeaponRifleTest : public WeaponFirearmInstance {
 
     virtual BipedAnimationBase::WeaponAnimationType get_weapon_animation_type() const override { return BipedAnimationBase::WEAPON_ANIMATION_TYPE_RIFLE; };
     virtual WeaponModel *instantiate_visuals() const override;
+public:
+    virtual StringName get_item_name() const override;
 };

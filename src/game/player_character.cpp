@@ -26,9 +26,11 @@
 #include "godot_cpp/classes/window.hpp"
 #include "godot_cpp/classes/world3d.hpp"
 #include "godot_cpp/core/error_macros.hpp"
+#include "godot_cpp/variant/callable_method_pointer.hpp"
 #include "godot_cpp/variant/packed_vector3_array.hpp"
 #include "godot_cpp/variant/transform3d.hpp"
 #include "physics_layers.h"
+#include <algorithm>
 
 CVar PlayerCharacter::player_camera_horizontal_deadzone_radius = CVar::create_variable("player.camera_horizontal_deadzone_radius", GDEXTENSION_VARIANT_TYPE_FLOAT, 0.1f, "Camera horizontal deadzone when not aiming.", PROPERTY_HINT_NONE, "");
 CVar PlayerCharacter::player_camera_distance_aim = CVar::create_variable("player.camera_distance_aim", GDEXTENSION_VARIANT_TYPE_FLOAT, 1.5f, "Camera distance when aiming.", PROPERTY_HINT_NONE, "");
@@ -81,9 +83,9 @@ void PlayerCharacter::_ready() {
     }
 
 
-
-    if (Object::cast_to<PlayerCharacterMilkCarried>(this) == nullptr) {
-
+    if (player_ui) {
+        player_ui->connect("unequip_item_requested", callable_mp(static_cast<BaseCharacter*>(this), &BaseCharacter::equip_weapon).bind(Ref<WeaponInstanceBase>()));
+        player_ui->connect("equip_item_requested", callable_mp(static_cast<BaseCharacter*>(this), &BaseCharacter::equip_weapon));
     }
 
     BaseCharacter::_ready();
@@ -95,6 +97,7 @@ void PlayerCharacter::_process(double p_delta) {
     if (Engine::get_singleton()->is_editor_hint()) {
         return;
     }
+
 
     const bool is_aiming = is_action_pressed(InputCommand::AIM);
 
@@ -115,7 +118,7 @@ void PlayerCharacter::_process(double p_delta) {
 
     animation->set_aim_x_angle(-(camera_aim_normal.angle_to(Vector3(0.0f, 1.0f, 0.0f)) - Math::deg_to_rad(90.0f)));
 
-    animation->set_is_aiming(is_aiming);
+    animation->set_is_aiming(is_aiming && equipped_weapons[WEAPON_SLOT_PRIMARY].is_valid());
 
     BaseCharacter::_process(p_delta);
 }
@@ -134,8 +137,12 @@ void PlayerCharacter::_physics_process(double p_delta) {
     static StringName sprint = "sprint";
     static StringName aim = "aim";
     
+    const bool has_any_weapon = std::any_of(equipped_weapons.begin(), equipped_weapons.end(), [](const Ref<WeaponInstanceBase> &inst) {
+        return inst.is_valid();
+    });
+
     input.movement_input = Input::get_singleton()->get_vector(move_left, move_right, move_forward, move_back);
-    input.button_states[InputCommand::AIM] = get_action_state(aim);
+    input.button_states[InputCommand::AIM] = get_action_state(aim) && has_any_weapon; // Bit of a HACK but ehhh
     input.button_states[InputCommand::PRIMARY_FIRE] = get_action_state(primary_fire);
     input.button_states[InputCommand::SECONDARY_FIRE] = get_action_state(secondary_fire);
     input.button_states[InputCommand::SPRINT] = get_action_state(sprint);
@@ -268,6 +275,7 @@ void PlayerCharacter::_ui_process(float p_delta) {
     const bool is_aiming = is_action_pressed(InputCommand::AIM);
 
     if (player_ui != nullptr) {
+        player_ui->update(this, p_delta);
         for (int i = 0; i < WEAPON_SLOT_MAX; i++) {
             const SlotAimOcclusionInformation &occlusion_info = per_slot_aim_occlusion_info[i];
             player_ui->update_crosshair(i, camera->get_camera(), is_aiming, occlusion_info.is_target_position_occluded, occlusion_info.target_position_interp_node->get_global_transform_interpolated().origin);
@@ -333,4 +341,16 @@ void PlayerCharacter::add_aim_occlusion_exception(RID p_exception) {
 
 void PlayerCharacter::remove_occlusion_exception(RID p_exception) {
     occlusion_exceptions.erase(p_exception);
+}
+
+Vector<StringName> PlayerCharacter::get_available_weapon_items(WeaponSlot p_slot) const {
+    Vector<StringName> weapon_items;
+    // TODO: Hardcode this... for now
+    if (p_slot == WEAPON_SLOT_PRIMARY) {
+        weapon_items.push_back("weapon_rifle_test_item");
+    } else if (p_slot == WEAPON_SLOT_SECONDARY) {
+        weapon_items.push_back("weapon_gravitygun_item");
+    }
+
+    return weapon_items;
 }

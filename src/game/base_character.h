@@ -3,6 +3,7 @@
 #include "game/base_movement.h"
 #include "game/biped_animation_base.h"
 #include "game/character_model.h"
+#include "godot_cpp/core/binder_common.hpp"
 #include "godot_cpp/core/error_macros.hpp"
 
 using namespace godot;
@@ -22,8 +23,8 @@ public:
         WEAPON_SLOT_MAX
     };
 protected:
-    std::array<WeaponModel*, WEAPON_SLOT_MAX> per_slot_weapon_visual;
-    Ref<WeaponInstanceBase> equipped_weapons[WeaponSlot::WEAPON_SLOT_MAX];
+    std::array<WeaponModel*, WEAPON_SLOT_MAX> per_slot_weapon_visual = { nullptr };
+    std::array<Ref<WeaponInstanceBase>, WEAPON_SLOT_MAX> equipped_weapons;
     Ref<MovementSettings> movement_settings;
     CharacterModel *model = nullptr;
     static void _bind_methods();
@@ -79,4 +80,8 @@ public:
     Vector3 get_facing_direction() const;
     void add_collision_exception(RID p_body);
     void remove_collision_exception(RID p_body);
+
+    virtual Vector<StringName> get_available_items(WeaponSlot p_slot) const { return Vector<StringName>(); }
 };
+
+VARIANT_ENUM_CAST(BaseCharacter::WeaponSlot)

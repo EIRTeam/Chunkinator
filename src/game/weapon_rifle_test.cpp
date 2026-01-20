@@ -11,3 +11,8 @@ WeaponModel *WeaponRifleTest::instantiate_visuals() const {
     return visual_instance;
 }
 
+StringName WeaponRifleTest::get_item_name() const {
+    static StringName s = "weapon_rifle_test_item";
+    return s;
+}
+

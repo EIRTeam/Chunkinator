@@ -37,7 +37,7 @@ void LaniakeaMainLoop::_initialize() {
     debug_overlay = memnew(DebugOverlay);
     debug_overlay->initialize(this);
 
-    game_rules = memnew(GameRulesLaniakea);
+    game_rules = memnew(LaniakeaGameRules);
     game_rules->initialize();
     
     timescale_cvar.connect_cvar_changed_callback(callable_mp(this, &LaniakeaMainLoop::_on_timescale_cvar_changed));
@@ -79,4 +79,8 @@ double LaniakeaMainLoop::get_process_time() const {
 
 LaniakeaMainLoop *LaniakeaMainLoop::get_singleton() {
     return singleton;
+}
+
+LaniakeaGameRules *LaniakeaMainLoop::get_game_rules() const {
+    return game_rules;
 }

@@ -50,5 +50,7 @@ public:
     void add_aim_occlusion_exception(RID p_exception);
     void remove_occlusion_exception(RID p_exception);
 
+    Vector<StringName> get_available_weapon_items(WeaponSlot p_slot) const;
+
     PlayerCharacter();
 };

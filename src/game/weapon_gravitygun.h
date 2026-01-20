@@ -28,11 +28,16 @@ class WeaponGravityGun : public WeaponInstanceBase {
     static CVar throw_velocity_cvar;
     static CVar throw_angular_velocity_max_cvar;
     Vector3 _random_angular_velocity(float p_min_rads, float p_max_rads) const;
-    virtual void primary_attack(int p_weapon_slot, const WeaponButtonState &p_button_state, BaseCharacter *p_character) override;
-    virtual void post_update(int p_weapon_slot, BaseCharacter *p_character, const WeaponButtonState &p_button_state) override;
     Generic6DOFJoint3D *_create_joint() const;
     void grab_object(LaniakeaPhysicsProp *p_prop, BaseCharacter *p_character);
     void drop_current_object();
     void do_throw(BaseCharacter *p_character);
+public:
+    virtual void primary_attack(int p_weapon_slot, const WeaponButtonState &p_button_state, BaseCharacter *p_character) override;
+    virtual void post_update(int p_weapon_slot, BaseCharacter *p_character, const WeaponButtonState &p_button_state) override;
     virtual float get_max_distance() const override;
+    virtual StringName get_item_name() const override;
+    static StringName _get_weapon_name() {
+        return "weapon_gravitygun";
+    };
 };

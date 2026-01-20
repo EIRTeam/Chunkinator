@@ -203,3 +203,8 @@ float WeaponGravityGun::get_max_distance() const {
     return pull_threshold_cvar.get_float();
 }
 
+StringName WeaponGravityGun::get_item_name() const {
+    static StringName s = "weapon_gravitygun_item";
+    return s;
+}
+

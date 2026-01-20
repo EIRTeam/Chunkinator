@@ -18,11 +18,15 @@
 #include "game/biped_animation_base.h"
 #include "game/bullet_trail.h"
 #include "game/character_model.h"
+#include "game/game_rules_laniakea.h"
 #include "game/main_loop.h"
 #include "game/movement_settings.h"
 #include "game/physics_prop.h"
 #include "game/player_character.h"
 #include "game/protagonist_player_character.h"
+#include "game/ui/radial_container.h"
+#include "game/ui/item_selector_ui.h"
+#include "game/ui/item_select_icon.h"
 #include "game/weapon_gravitygun.h"
 #include "game/weapon_instance.h"
 #include "game/weapon_firearm.h"
@@ -61,6 +65,7 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level)
 	GDREGISTER_ABSTRACT_CLASS(ConsoleGUI);
 	GDREGISTER_CLASS(PlayerCamera);
 	GDREGISTER_CLASS(LaniakeaMainLoop);
+	GDREGISTER_ABSTRACT_CLASS(LaniakeaGameRules);
 	GDREGISTER_CLASS(MovementSettings);
 	GDREGISTER_ABSTRACT_CLASS(Chunkinator);
 	GDREGISTER_ABSTRACT_CLASS(ChunkinatorDebugLayerViewer);
@@ -73,7 +78,7 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level)
 	GDREGISTER_ABSTRACT_CLASS(BaseCharacter);
 	GDREGISTER_ABSTRACT_CLASS(WeaponInstanceBase);
 	GDREGISTER_ABSTRACT_CLASS(WeaponFirearmInstance);
-	GDREGISTER_ABSTRACT_CLASS(WeaponRifleTest);
+	GDREGISTER_CLASS(WeaponRifleTest);
 	GDREGISTER_ABSTRACT_CLASS(BipedAnimationBase);
 	GDREGISTER_CLASS(PlayerUI);
 	GDREGISTER_CLASS(CharacterModel);
@@ -85,6 +90,9 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level)
 	GDREGISTER_CLASS(WeaponModel);
 	GDREGISTER_CLASS(WeaponGravityGun);
 	GDREGISTER_CLASS(LaniakeaPhysicsProp);
+	GDREGISTER_CLASS(RadialContainer);
+	GDREGISTER_CLASS(ItemSelectorUI);
+	GDREGISTER_CLASS(ItemSelectIcon);
 	
 	GDREGISTER_CLASS(InertializationSkeletonModifierPolynomial);
 }
